@@ -1,0 +1,39 @@
+# braid volume trigger configuration
+
+modules:         
+  - 'land_toprangefinder'
+  - 'retreat_allrangefinders'
+  - 'orient_rangefinders'
+  - 'approach_frontrangefinder'
+  - 'circleright_topfronttrangefinder_delayed'
+  - #'land_bottomrangefinder'
+  - #'retreat_toprangefinder'
+
+land_bottomrangefinder:
+  - 200 # land threshold, mm
+
+land_toprangefinder:
+  - 100 # land threshold, mm
+
+retreat_toprangefinder:
+  - 300 # distance threshold, mm
+  - 0.2 # retreat distance, m
+
+approach_frontrangefinder:
+  - 500 # high distance threshold, mm
+  - 200 # low distance threshold, mm
+  - 0.2 # approach distance, m
+
+retreat_allrangefinders:
+  - 100 # distance threshold, mm
+  - 0.2 # retreat distance, m
+
+orient_rangefinders:
+  - 500 # high distance threshold, mm
+  - 200 # low distance threshold, mm
+  - 90 # turn angle, deg
+
+circleright_topfronttrangefinder_delayed:
+  - 3   # time history
+  - 500 # distance threshold for front rangefinder
+  - 0.3 # circle radius, m

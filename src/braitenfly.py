@@ -1,0 +1,429 @@
+#!/usr/bin/env python3
+
+# Command line arguments
+from optparse import OptionParser
+
+# ROS imports
+import roslib, rospy, actionlib
+from geometry_msgs.msg import Vector3
+from std_msgs.msg import UInt16
+
+# Crazyflie imports
+from cflib.crazyflie import Crazyflie
+from cflib.crazyflie.log import LogConfig as cfLogConfig
+from rospy_crazyflie.msg import *
+import rospy_crazyflie.client
+from rospy_crazyflie.srv import *
+
+# standard libraries
+import numpy as np
+import yaml, json
+import pandas
+import atexit
+import sys
+
+# Special ROS imports
+from rospy_message_converter import message_converter
+
+try:
+    from collections.abc import MutableMapping
+except:
+    from collections import MutableMapping
+
+################################################################################
+
+def load_configuration(config_file):
+    with open(config_file) as stream:
+        config = yaml.safe_load(stream)
+    return config
+
+def flatten(dictionary, parent_key='', separator='_'):
+    items = []
+    for key, value in dictionary.items():
+        new_key = parent_key + separator + key if parent_key else key
+        if isinstance(value, MutableMapping):
+            items.extend(flatten(value, new_key, separator=separator).items())
+        else:
+            items.append((new_key, value))
+    return dict(items)
+
+################################################################################
+
+class Braiten_Fly(object):
+    def __init__(self, config_file, crazyflie_name, crazyflie_number, takeoff):
+        
+        rospy.init_node("braiten_fly")
+
+        self.config = load_configuration(config_file)
+        self.crazyflie_name = crazyflie_name
+        self.takeoff = takeoff
+
+        # Connect to a Crazyflie on the server
+        crazyflies = rospy_crazyflie.client.get_crazyflies(server='/crazyflie_server')
+        self.cfclient = rospy_crazyflie.client.Client(crazyflies[crazyflie_number])
+        self.current_blocking_action = None
+
+        atexit.register(self.land_and_shutdown)
+
+
+        self.history_length = 100
+        self.module_rate = rospy.Rate(20) # check modules at X Hz
+
+        self.home = None 
+        #self.safety_net = np.array(self.config[safety_net])
+
+        # Set up sensor subscribers
+        ###########################
+        self.sensor_topics = [  'KalmanPositionEst', # (float) kalman.stateX, kalman.stateY, kalman.stateZ
+                                'MotorPower', # (int32_t) motor.m4, motor.m1, motor.m2, motor.m3
+                                'Stabilizer', # (float) stabilizer.roll, stabilizer.pitch, stabilizer.yaw, (unit16_t) stabilizer.thrust 
+                                'Acceleration', # (float) acc.x, acc.y, acc.z
+                                'Gyro', # (float) gyro.x, gyro.y, gyro.z
+                                'StateEst', # (float) stateEstimate.ax, stateEstimate.ay, stateEstimate.az, stateEstimate.vx, stateEstimate.vy, stateEstimate.vz
+                                'Range', # (unit16_t) range.back, range.front, range.left, range.right, range.up, range.zrange
+                                ]
+
+        self.sensor_subscribers = {}
+        for topic_name in self.sensor_topics:
+            self.sensor_subscribers[topic_name] = rospy.Subscriber(self.crazyflie_name + '/' + topic_name, 
+                                                                   eval(topic_name), # topic names are also message types.. yes, eval() is bad coding practice 
+                                                                   self.sensor_callback,
+                                                                   topic_name, # send topic name to call back
+                                                                   queue_size = 10,
+                                                                   ) 
+        ############################
+
+        self.sensor_history = {topic_name: None for topic_name in self.sensor_topics}
+        self.module_history = []
+        self.module_history_timestamps = []
+
+        self.action_stack = [] # list of lists, each sublist should be ['cfclient action', parameters]
+        self.action_stack_length = 60
+
+    def wait(self):
+        while self.cfclient.action_in_progress():
+            rospy.sleep(.01)
+
+    def land_and_shutdown(self):
+        if self.takeoff:
+            self.cfclient.land()
+            self.wait()
+            del self.cfclient
+            sys.exit(0)
+
+    def sensor_callback(self, msg, topic_name):
+        # save current sensor info
+        msg_dictionary = message_converter.convert_ros_message_to_dictionary(msg)
+        flat_msg_dictionary = flatten(msg_dictionary)
+
+        if self.sensor_history[topic_name] is None:
+            self.sensor_history[topic_name] = pandas.DataFrame(flat_msg_dictionary, index=[0])
+        else:
+            self.sensor_history[topic_name] = pandas.concat([self.sensor_history[topic_name], pandas.DataFrame(flat_msg_dictionary, index=[self.sensor_history[topic_name].index.max()+1])])
+
+        # remove old history
+        while len(self.sensor_history[topic_name]) > self.history_length:
+            self.sensor_history[topic_name] = self.sensor_history[topic_name].drop(self.sensor_history[topic_name].index.min())
+
+    def execute_command(self, command):
+        command_name, parameters = command
+
+        if command_name == 'shutdown':
+            self.takeoff = 0
+            del self.cfclient
+            sys.exit(0)
+
+        if parameters is None:
+            self.cfclient.__getattribute__(command_name)()
+        elif type(parameters) is list:
+            self.cfclient.__getattribute__(command_name)(*parameters)
+        else:
+            self.cfclient.__getattribute__(command_name)(parameters)
+
+        self.wait()
+
+    def fix_priority(self, priority):
+        if priority == -1: # insert at bottom of stack
+            priority = len(self.action_stack)
+        if priority > len(self.action_stack):
+            priority = len(self.action_stack)
+        return priority
+
+    def main(self):
+
+        print('Modules loaded:')
+        print(self.config['modules'])
+
+        rospy.sleep(0.1)
+
+        if self.takeoff:
+            self.cfclient.take_off(.75)
+            self.wait()
+
+        while not rospy.is_shutdown():
+            self.timenow = rospy.get_time()
+
+            # clear out old module history (to prevent memory leak)
+            while len(self.module_history) > self.history_length:
+                _ = self.module_history.pop[0]
+                _ = self.module_history_timestamps.pop[0]
+
+            # remove actions from the bottom of the stack if there are too many
+            if len(self.action_stack) > self.action_stack_length:
+                ix = len(self.action_stack) - self.action_stack_length
+                del(self.action_stack[ix:])
+
+            # check each module
+            # if a module with very high priority is encountered, execute immediately
+            for module in self.config['modules']:
+                if module is not None:
+                    priority, command = self.__getattribute__('module_' + module)(module)
+
+                    # add the commands to the stack
+                    if command is not None:
+                        self.module_history.append(module)
+                        self.module_history_timestamps.append(self.timenow)
+                        if type(command[0]) is not list: # we have only 1 command
+                            command = [command,]
+                        for i, c in enumerate(command):
+                            p = self.fix_priority(priority)
+                            p = self.fix_priority(p+i)
+                            self.action_stack.insert(p, c)
+                    
+                    # go straight to execution when presented with an immediate priority command
+                    if priority == 0:
+                        continue
+
+            if len(self.action_stack) > 0:
+                print(self.action_stack)
+
+            # execute command from the top of the stack
+            if self.takeoff and len(self.action_stack) > 0:
+                command = self.action_stack.pop(0)
+                self.execute_command(command)
+            
+            self.module_rate.sleep()
+            
+    def module_land_toprangefinder(self, module_name):
+        """
+        If an object is above, land, and shutdown.
+
+        ending action 
+
+        :return: None x3
+        """
+
+        parameters = self.config[module_name]
+        land_threshold, = parameters
+
+        if self.sensor_history['Range']['up'].values[-1] < land_threshold:
+            return 0, [['land',None], ['shutdown',None]]
+        else:
+            return None, None            
+
+    def module_land_bottomrangefinder(self, module_name):
+        """
+        If an object is below, land, and shutdown.
+
+        ending action 
+
+        :return: None x3
+        """
+
+        parameters = self.config[module_name]
+        land_threshold, = parameters
+
+        if self.takeoff:
+            return 0, [['land',None], ['shutdown',None]]
+        else:
+            return None, None  
+
+    def module_approach_frontrangefinder(self, module_name):
+        """
+        If an object is nearby to the forward facing range finder, move forwards by a specified amount. 
+
+        Low priority, open loop command. 
+
+        :return: 
+        priority    : (int) 1 or 0 indicating high or low priority, respectively
+        action      : None
+        commands    : (list) of four signed command actions
+        """
+
+        parameters = self.config[module_name]
+        high_distance_threshold, low_distance_threshold, approach_distance = parameters
+
+        ranges = self.sensor_history['Range'][['front', 'left', 'back', 'right']].values[-1]
+
+        if ranges[0] < high_distance_threshold and ranges[0] > low_distance_threshold:
+            return [-1, ['forward', approach_distance]]
+        else:
+            return None, None 
+
+    def module_retreat_toprangefinder(self, module_name):
+        """
+        If an object is nearby to the top range finder, move down by a specified amount. 
+
+        High priority, open loop command
+
+        :return: 
+        priority    : (int) 1 or 0 indicating high or low priority, respectively
+        action      : None
+        commands    : (list) of four signed command actions
+        """
+
+        parameters = self.config[module_name]
+        distance_threshold, retreat_distance = parameters
+
+        toprange = self.sensor_history['Range'][['up']].values[-1]
+
+        if toprange < distance_threshold:
+            return [1, ['down', retreat_distance]]
+        else:
+            return None, None
+
+    def module_retreat_allrangefinders(self, module_name):
+        """
+        If an object is nearby to any sideways range finder, move away by a specified amount. 
+
+        High priority, open loop command
+
+        :return: 
+        priority    : (int) 1 or 0 indicating high or low priority, respectively
+        action      : None
+        commands    : (list) of four signed command actions
+        """
+
+        parameters = self.config[module_name]
+        distance_threshold, retreat_distance = parameters
+
+        ranges = self.sensor_history['Range'][['front', 'left', 'back', 'right']].values[-1]
+
+
+        # check sensor values give sensor history
+        commands_numerical = [0, 0, 0]
+        if ranges[0] < distance_threshold:
+            commands_numerical[0] += -1*retreat_distance
+        if ranges[1] < distance_threshold:
+            commands_numerical[1] += -1*retreat_distance
+        if ranges[2] < distance_threshold:
+            commands_numerical[0] += retreat_distance
+        if ranges[3] < distance_threshold:
+            commands_numerical[1] += retreat_distance
+
+        commands_action = []
+        
+        if commands_numerical[0] < 0:
+            commands_action.append(['back', float(np.abs(commands_numerical[0])) ])
+        elif commands_numerical[0] > 0:
+            commands_action.append(['forward', float(np.abs(commands_numerical[0])) ])
+
+        if commands_numerical[1] < 0:
+            commands_action.append(['right', float(np.abs(commands_numerical[1])) ])
+        elif commands_numerical[1] > 0:
+            commands_action.append(['left', float(np.abs(commands_numerical[1])) ])
+
+        if commands_numerical[2] < 0:
+            commands_action.append(['down', float(np.abs(commands_numerical[2])) ])
+        elif commands_numerical[2] > 0:
+            commands_action.append(['up', float(np.abs(commands_numerical[2])) ])
+
+        if len(commands_action) > 0:
+            return 0, commands_action
+        else:
+            return None, None
+
+
+    def module_orient_rangefinders(self, module_name):
+        """
+        If there is an object within a given threshold distance from the four lateral facing rangefinders, 
+        perform a yaw rotation to face the object. 
+
+        Low priority, open loop command
+
+        :return: 
+        priority    : (int) 1 or 0 indicating high or low priority, respectively
+        action      : None
+        commands    : (list) of four signed command actions
+        """
+
+        parameters = self.config[module_name]
+        high_distance_threshold, low_distance_threshold, turnangle = parameters
+
+        ranges = self.sensor_history['Range'][['front', 'left', 'back', 'right']].values[-1]
+        
+
+        command_turnangle = 0
+
+        if np.abs(self.sensor_history['Gyro']['z'].values[-1]) < 30:
+            if np.min(ranges) < high_distance_threshold and np.min(ranges) > low_distance_threshold: # this is a little funny
+                if np.argmin(ranges) == 1:
+                    command_turnangle = turnangle
+                if np.argmin(ranges) == 2:
+                    command_turnangle = -1*turnangle
+                if np.argmin(ranges) == 3:
+                    command_turnangle = -1*turnangle
+
+        turnangle = int(command_turnangle)
+        if turnangle > 0:
+            return 1, ['turn_left', int(np.abs(turnangle))]
+        elif turnangle < 0:
+            return 1, ['turn_right', int(np.abs(turnangle))]
+        else:
+            return None, None
+
+    def module_circleright_topfronttrangefinder_delayed(self, module_name):
+        """
+        If there is an object within the threshold distance from the top (upward) facing range finder,
+        and if in the last 3 seconds there was an object in front, but there isn't any more, then
+        fly in circles.
+
+        low priority, overriding action
+
+        :return: 
+        priority    : (int) 1 or 0 indicating high or low priority, respectively
+        action      : action name (circle right)
+        commands    : (list) action args
+        """
+
+        parameters = self.config[module_name]
+        sensor_time_history, distance_threshold, circle_radius = parameters
+
+        # check sensor values give sensor history
+        ranges_now = self.sensor_history['Range'][['up', 'front']].values[-1]
+
+        q = 'stamp_secs >= ' + str( float(self.timenow) - float(3))
+        
+        circle = False
+        if ranges_now[0] < distance_threshold:
+            if self.sensor_history['Range'].query(q)['front'].min() < distance_threshold:
+                if ranges_now[1] > distance_threshold:
+                    circle = True 
+
+        if circle:
+            commands = []
+            for i in range(20):
+                commands.append(['forward', 0.1])
+                commands.append(['turn_right', 18])
+            return -1, commands 
+
+        else:
+            return None, None
+            
+################################################################################
+
+if __name__ == '__main__':    
+    parser = OptionParser()
+    parser.add_option("--takeoff", type="int", dest="takeoff", default=0,
+                        help="take off (0 or 1), default 0 = will not take off")
+    parser.add_option("--crazyflie", type="str", dest="crazyflie_name", default='crazyflie1',
+                        help="crazyflie name (base topic)")
+    parser.add_option("--config", type="str", dest="config", default='braitenfly_config.yaml',
+                        help="crazyflie config file")
+    parser.add_option("--crazyflie_number", type="int", dest="crazyflie_number", default=0,
+                        help="which crazyflie to connect to on server, default 0")
+
+    (options, args) = parser.parse_args()
+
+    braiten_fly = Braiten_Fly(options.config, options.crazyflie_name, options.crazyflie_number, options.takeoff)
+    braiten_fly.main()
