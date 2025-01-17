@@ -56,7 +56,7 @@ def flatten(dictionary, parent_key='', separator='_'):
 ################################################################################
 
 class Braiten_Fly(object):
-    def __init__(self, config_file, crazyflie_name, crazyflie_number, takeoff):
+    def __init__(self, config_file, crazyflie_name, crazyflie_number, takeoff, buzzer):
         
         rospy.init_node("braiten_fly")
         print("Initialize braiten-fly")
@@ -69,9 +69,16 @@ class Braiten_Fly(object):
         crazyflies = rospy_crazyflie.client.get_crazyflies(server='/crazyflie_server')
         self.cfclient = rospy_crazyflie.client.Client(crazyflies[crazyflie_number])
         self.current_blocking_action = None
+        print('Client initialized.')
+
+        # Play startup sound
+        self.buzzer = buzzer
+        if self.buzzer:
+            print('Playing sound...', end='')
+            self.cfclient.play_buzzer(number=11, frequency=500, duration=3.0, stop=True)
+            print('done.')
 
         atexit.register(self.land_and_shutdown)
-
 
         self.history_length = 100
         self.module_rate = rospy.Rate(20) # check modules at X Hz
@@ -429,8 +436,14 @@ if __name__ == '__main__':
                         help="crazyflie config file")
     parser.add_option("--crazyflie_number", type="int", dest="crazyflie_number", default=0,
                         help="which crazyflie to connect to on server, default 0")
+    parser.add_option("--buzzer", type="int", dest="buzzer", default=1,
+                        help="buzzer (0 or 1), default 01 = will use buzzer")
 
     (options, args) = parser.parse_args()
 
-    braiten_fly = Braiten_Fly(options.config, options.crazyflie_name, options.crazyflie_number, options.takeoff)
+    braiten_fly = Braiten_Fly(options.config,
+                              options.crazyflie_name,
+                              options.crazyflie_number,
+                              options.takeoff,
+                              options.buzzer)
     braiten_fly.main()
