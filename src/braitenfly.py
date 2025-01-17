@@ -5,6 +5,8 @@ from optparse import OptionParser
 
 # ROS imports
 import roslib, rospy, actionlib
+import rospkg
+
 from geometry_msgs.msg import Vector3
 from std_msgs.msg import UInt16
 
@@ -21,6 +23,7 @@ import yaml, json
 import pandas
 import atexit
 import sys
+import os
 
 # Special ROS imports
 from rospy_message_converter import message_converter
@@ -33,7 +36,10 @@ except:
 ################################################################################
 
 def load_configuration(config_file):
-    with open(config_file) as stream:
+    rospack = rospkg.RosPack()
+    package_path = rospack.get_path('braitenfly')
+    config_path = os.path.join(package_path, 'config', 'braitenfly_config.yaml')
+    with open(config_path) as stream:
         config = yaml.safe_load(stream)
     return config
 
@@ -53,6 +59,7 @@ class Braiten_Fly(object):
     def __init__(self, config_file, crazyflie_name, crazyflie_number, takeoff):
         
         rospy.init_node("braiten_fly")
+        print("Initialize braiten-fly")
 
         self.config = load_configuration(config_file)
         self.crazyflie_name = crazyflie_name
