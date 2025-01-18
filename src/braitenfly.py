@@ -75,7 +75,9 @@ class Braiten_Fly(object):
         self.buzzer = buzzer
         if self.buzzer:
             print('Playing sound...', end='')
-            self.cfclient.play_buzzer(number=11, frequency=500, duration=3.0, stop=True)
+            # self.cfclient.play_buzzer(number=11, frequency=500, duration=3.0, stop=True)
+            command = ('play_buzzer', [11, 500, 3.0, True])
+            self.execute_command(command)
             print('done.')
 
         atexit.register(self.land_and_shutdown)
@@ -217,23 +219,28 @@ class Braiten_Fly(object):
                 self.execute_command(command)
             
             self.module_rate.sleep()
-            
-    def module_land_toprangefinder(self, module_name):
+
+    def module_approach_frontrangefinder(self, module_name):
         """
-        If an object is above, land, and shutdown.
+        If an object is nearby to the forward facing range finder, move forwards by a specified amount.
 
-        ending action 
+        Low priority, open loop command.
 
-        :return: None x3
+        :return:
+        priority    : (int) 1 or 0 indicating high or low priority, respectively
+        action      : None
+        commands    : (list) of four signed command actions
         """
 
         parameters = self.config[module_name]
-        land_threshold, = parameters
+        high_distance_threshold, low_distance_threshold, approach_distance = parameters
 
-        if self.sensor_history['Range']['up'].values[-1] < land_threshold:
-            return 0, [['land',None], ['shutdown',None]]
+        ranges = self.sensor_history['Range'][['front', 'left', 'back', 'right']].values[-1]
+
+        if ranges[0] < high_distance_threshold and ranges[0] > low_distance_threshold:
+            return [-1, ['forward', approach_distance]]
         else:
-            return None, None            
+            return None, None
 
     def module_land_bottomrangefinder(self, module_name):
         """
