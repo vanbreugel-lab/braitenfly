@@ -179,8 +179,8 @@ class Braiten_Fly(object):
 
             # clear out old module history (to prevent memory leak)
             while len(self.module_history) > self.history_length:
-                _ = self.module_history.pop[0]
-                _ = self.module_history_timestamps.pop[0]
+                _ = self.module_history.pop(0)
+                _ = self.module_history_timestamps.pop(0)
 
             # remove actions from the bottom of the stack if there are too many
             if len(self.action_stack) > self.action_stack_length:
