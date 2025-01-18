@@ -5,9 +5,19 @@ modules:
   - 'retreat_allrangefinders'
   - 'orient_rangefinders'
   - 'approach_frontrangefinder'
+#  - 'buzzer_frontrangefinder'
   - 'circleright_topfronttrangefinder_delayed'
   - #'land_bottomrangefinder'
   - #'retreat_toprangefinder'
+
+buzzer_frontrangefinder:
+  - 500 # high distance threshold, mm
+  - 200 # low distance threshold, mm
+  - 0.2 # approach distance, m
+#  - 12 # sound
+#  - 500 # frequency
+#  - 0.01 # duration
+#  - 1 # stop
 
 land_bottomrangefinder:
   - 200 # land threshold, mm

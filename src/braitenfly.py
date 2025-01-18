@@ -220,6 +220,28 @@ class Braiten_Fly(object):
             
             self.module_rate.sleep()
 
+    def module_buzzer_frontrangefinder(self, module_name):
+        """
+        If an object is nearby to the forward facing range finder, move forwards by a specified amount.
+
+        Low priority, open loop command.
+
+        :return:
+        priority    : (int) 1 or 0 indicating high or low priority, respectively
+        action      : None
+        commands    : (list) of four signed command actions
+        """
+
+        parameters = self.config[module_name]
+        high_distance_threshold, low_distance_threshold, approach_distance = parameters
+
+        ranges = self.sensor_history['Range'][['front', 'left', 'back', 'right']].values[-1]
+
+        if ranges[0] < high_distance_threshold and ranges[0] > low_distance_threshold:
+            return [1, ['play_buzzer', [12, 500, 0.1, 1]]]
+        else:
+            return None, None
+
     def module_land_toprangefinder(self, module_name):
         """
         If an object is above, land, and shutdown.
