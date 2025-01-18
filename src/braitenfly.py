@@ -220,6 +220,40 @@ class Braiten_Fly(object):
             
             self.module_rate.sleep()
 
+    def module_land_toprangefinder(self, module_name):
+        """
+        If an object is above, land, and shutdown.
+
+        ending action
+
+        :return: None x3
+        """
+
+        parameters = self.config[module_name]
+        land_threshold, = parameters
+
+        if self.sensor_history['Range']['up'].values[-1] < land_threshold:
+            return 0, [['land',None], ['shutdown',None]]
+        else:
+            return None, None
+
+    def module_land_bottomrangefinder(self, module_name):
+        """
+        If an object is below, land, and shutdown.
+
+        ending action
+
+        :return: None x3
+        """
+
+        parameters = self.config[module_name]
+        land_threshold, = parameters
+
+        if self.takeoff:
+            return 0, [['land',None], ['shutdown',None]]
+        else:
+            return None, None
+
     def module_approach_frontrangefinder(self, module_name):
         """
         If an object is nearby to the forward facing range finder, move forwards by a specified amount.
@@ -246,7 +280,7 @@ class Braiten_Fly(object):
         """
         If an object is below, land, and shutdown.
 
-        ending action 
+        ending action
 
         :return: None x3
         """
@@ -257,15 +291,15 @@ class Braiten_Fly(object):
         if self.takeoff:
             return 0, [['land',None], ['shutdown',None]]
         else:
-            return None, None  
+            return None, None
 
     def module_approach_frontrangefinder(self, module_name):
         """
-        If an object is nearby to the forward facing range finder, move forwards by a specified amount. 
+        If an object is nearby to the forward facing range finder, move forwards by a specified amount.
 
-        Low priority, open loop command. 
+        Low priority, open loop command.
 
-        :return: 
+        :return:
         priority    : (int) 1 or 0 indicating high or low priority, respectively
         action      : None
         commands    : (list) of four signed command actions
@@ -279,15 +313,15 @@ class Braiten_Fly(object):
         if ranges[0] < high_distance_threshold and ranges[0] > low_distance_threshold:
             return [-1, ['forward', approach_distance]]
         else:
-            return None, None 
+            return None, None
 
     def module_retreat_toprangefinder(self, module_name):
         """
-        If an object is nearby to the top range finder, move down by a specified amount. 
+        If an object is nearby to the top range finder, move down by a specified amount.
 
         High priority, open loop command
 
-        :return: 
+        :return:
         priority    : (int) 1 or 0 indicating high or low priority, respectively
         action      : None
         commands    : (list) of four signed command actions
@@ -305,11 +339,11 @@ class Braiten_Fly(object):
 
     def module_retreat_allrangefinders(self, module_name):
         """
-        If an object is nearby to any sideways range finder, move away by a specified amount. 
+        If an object is nearby to any sideways range finder, move away by a specified amount.
 
         High priority, open loop command
 
-        :return: 
+        :return:
         priority    : (int) 1 or 0 indicating high or low priority, respectively
         action      : None
         commands    : (list) of four signed command actions
@@ -333,7 +367,7 @@ class Braiten_Fly(object):
             commands_numerical[1] += retreat_distance
 
         commands_action = []
-        
+
         if commands_numerical[0] < 0:
             commands_action.append(['back', float(np.abs(commands_numerical[0])) ])
         elif commands_numerical[0] > 0:
@@ -357,12 +391,12 @@ class Braiten_Fly(object):
 
     def module_orient_rangefinders(self, module_name):
         """
-        If there is an object within a given threshold distance from the four lateral facing rangefinders, 
-        perform a yaw rotation to face the object. 
+        If there is an object within a given threshold distance from the four lateral facing rangefinders,
+        perform a yaw rotation to face the object.
 
         Low priority, open loop command
 
-        :return: 
+        :return:
         priority    : (int) 1 or 0 indicating high or low priority, respectively
         action      : None
         commands    : (list) of four signed command actions
@@ -372,7 +406,7 @@ class Braiten_Fly(object):
         high_distance_threshold, low_distance_threshold, turnangle = parameters
 
         ranges = self.sensor_history['Range'][['front', 'left', 'back', 'right']].values[-1]
-        
+
 
         command_turnangle = 0
 
@@ -401,7 +435,7 @@ class Braiten_Fly(object):
 
         low priority, overriding action
 
-        :return: 
+        :return:
         priority    : (int) 1 or 0 indicating high or low priority, respectively
         action      : action name (circle right)
         commands    : (list) action args
@@ -414,23 +448,23 @@ class Braiten_Fly(object):
         ranges_now = self.sensor_history['Range'][['up', 'front']].values[-1]
 
         q = 'stamp_secs >= ' + str( float(self.timenow) - float(3))
-        
+
         circle = False
         if ranges_now[0] < distance_threshold:
             if self.sensor_history['Range'].query(q)['front'].min() < distance_threshold:
                 if ranges_now[1] > distance_threshold:
-                    circle = True 
+                    circle = True
 
         if circle:
             commands = []
             for i in range(20):
                 commands.append(['forward', 0.1])
                 commands.append(['turn_right', 18])
-            return -1, commands 
+            return -1, commands
 
         else:
             return None, None
-            
+
 ################################################################################
 
 if __name__ == '__main__':    
