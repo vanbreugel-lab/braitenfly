@@ -24,6 +24,7 @@ import pandas
 import atexit
 import sys
 import os
+import time
 
 # Special ROS imports
 from rospy_message_converter import message_converter
@@ -116,6 +117,9 @@ class Braiten_Fly(object):
         self.action_stack = [] # list of lists, each sublist should be ['cfclient action', parameters]
         self.action_stack_length = 60
 
+        self.buzzer_stack = [] # list of lists, each sublist should be [timestamp, 'cfclient action', parameters], where timestamp says the time at which to execute
+        self.buzzer_stack_length = 100
+
     def wait(self):
         while self.cfclient.action_in_progress():
             rospy.sleep(.01)
@@ -124,6 +128,12 @@ class Braiten_Fly(object):
         if self.takeoff:
             self.cfclient.land()
             self.wait()
+            rospy.sleep(0.5)
+            if self.buzzer:
+                self.buzzer_stack = []
+                command = ('play_buzzer', [0, 0, 0, 0])
+                self.execute_command(command)
+                rospy.sleep(0.1)
             del self.cfclient
             sys.exit(0)
 
@@ -173,8 +183,16 @@ class Braiten_Fly(object):
         rospy.sleep(0.1)
 
         if self.takeoff:
+            print('Taking off!!')
             self.cfclient.take_off(.75)
             self.wait()
+
+            if self.buzzer:
+                command = ('play_buzzer', [11, 500, 3.0, True])
+                self.execute_command(command)
+
+        else:
+            print('Not taking off!!')
 
         while not rospy.is_shutdown():
             self.timenow = rospy.get_time()
@@ -188,6 +206,9 @@ class Braiten_Fly(object):
             if len(self.action_stack) > self.action_stack_length:
                 ix = len(self.action_stack) - self.action_stack_length
                 del(self.action_stack[ix:])
+            if len(self.buzzer_stack) > self.buzzer_stack_length:
+                ix = len(self.buzzer_stack) - self.buzzer_stack_length
+                del(self.buzzer_stack[ix:])
 
             # check each module
             # if a module with very high priority is encountered, execute immediately
@@ -201,17 +222,30 @@ class Braiten_Fly(object):
                         self.module_history_timestamps.append(self.timenow)
                         if type(command[0]) is not list: # we have only 1 command
                             command = [command,]
-                        for i, c in enumerate(command):
-                            p = self.fix_priority(priority)
-                            p = self.fix_priority(p+i)
-                            self.action_stack.insert(p, c)
+
+                        if 'play_buzzer' not in command[0]:
+                            for i, c in enumerate(command):
+                                p = self.fix_priority(priority)
+                                p = self.fix_priority(p+i)
+                                self.action_stack.insert(p, c)
+                        else:
+                            for i, c in enumerate(command[::-1]):
+                                self.buzzer_stack.insert(0, c)
                     
                     # go straight to execution when presented with an immediate priority command
                     if priority == 0:
                         continue
 
             if len(self.action_stack) > 0:
-                print(self.action_stack)
+                pass
+                #print(self.action_stack)
+
+            # execute command from the top of the buzzer stack
+            if len(self.buzzer_stack) > 0:
+                print(self.buzzer_stack)
+                if time.time() > self.buzzer_stack[0][0]:
+                    buzzer_command = self.buzzer_stack.pop(0)
+                    self.execute_command(buzzer_command[1:])
 
             # execute command from the top of the stack
             if self.takeoff and len(self.action_stack) > 0:
@@ -222,23 +256,37 @@ class Braiten_Fly(object):
 
     def module_buzzer_frontrangefinder(self, module_name):
         """
-        If an object is nearby to the forward facing range finder, move forwards by a specified amount.
-
-        Low priority, open loop command.
+        If an object is nearby to the forward facing range finder, play a sound for 0.5 second
 
         :return:
-        priority    : (int) 1 or 0 indicating high or low priority, respectively
-        action      : None
         commands    : (list) of four signed command actions
         """
 
         parameters = self.config[module_name]
-        high_distance_threshold, low_distance_threshold, approach_distance = parameters
+        distance_threshold = parameters
 
         ranges = self.sensor_history['Range'][['front', 'left', 'back', 'right']].values[-1]
 
-        if ranges[0] < high_distance_threshold and ranges[0] > low_distance_threshold:
-            return [1, ['play_buzzer', [12, 500, 0.1, 1]]]
+        if ranges[0] < distance_threshold:
+            return 1, [[0, 'play_buzzer', [12, 5000, 0, 0]], [time.time()+0.5, 'play_buzzer', [0, 500, 0, 0]]]
+        else:
+            return None, None
+
+    def module_buzzer_accelsideways(self, module_name):
+        """
+        If crazyflie accelerates sideways, and no sounds are cued, then play a sound
+
+        :return:
+        commands    : (list) of four signed command actions
+        """
+
+        parameters = self.config[module_name]
+        yacc_threshold = parameters[0]
+
+        yacc = np.abs(self.sensor_history['StateEst'][['ay']].values[-1][0])
+
+        if yacc > yacc_threshold: # going backward: play sound
+            return 1, [[0, 'play_buzzer', [12, 3000, 0, 0]], [time.time()+0.1, 'play_buzzer', [0, 500, 0, 0]]]
         else:
             return None, None
 
