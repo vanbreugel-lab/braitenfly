@@ -1,18 +1,14 @@
 # braid volume trigger configuration
 
 modules:         
+  - 'buzzer_frontrangefinder'
   - 'land_toprangefinder'
   - 'retreat_allrangefinders'
-  - #'orient_rangefinders'
-  - #'approach_frontrangefinder'
-  - 'buzzer_frontrangefinder'
-  - 'buzzer_accelsideways'
+  - 'orient_rangefinders'
+  - 'approach_frontrangefinder'
   - #'circleright_topfronttrangefinder_delayed'
   - #'land_bottomrangefinder'
   - #'retreat_toprangefinder'
-
-buzzer_accelsideways:
-  - 0.6 # y accel threshold, mm
 
 buzzer_frontrangefinder:
   - 200 # distance threshold, mm

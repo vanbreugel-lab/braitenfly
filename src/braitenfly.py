@@ -134,6 +134,7 @@ class Braiten_Fly(object):
                 command = ('play_buzzer', [0, 0, 0, 0])
                 self.execute_command(command)
                 rospy.sleep(0.1)
+            self.takeoff = 0
             del self.cfclient
             sys.exit(0)
 
@@ -187,10 +188,6 @@ class Braiten_Fly(object):
             self.cfclient.take_off(.75)
             self.wait()
 
-            if self.buzzer:
-                command = ('play_buzzer', [11, 500, 3.0, True])
-                self.execute_command(command)
-
         else:
             print('Not taking off!!')
 
@@ -210,42 +207,48 @@ class Braiten_Fly(object):
                 ix = len(self.buzzer_stack) - self.buzzer_stack_length
                 del(self.buzzer_stack[ix:])
 
+            # do the buzzer modules
+            for module in self.config['modules']:
+                if module is not None:
+                    if 'buzzer' in module:
+                        priority, command = self.__getattribute__('module_' + module)(module)
+                        if command is not None:
+                            for i, c in enumerate(command[::-1]):
+                                self.buzzer_stack.insert(0, c)
+            
+            # execute command from the top of the buzzer stack
+            if len(self.buzzer_stack) > 0:
+                #print(self.buzzer_stack)
+                if time.time() > self.buzzer_stack[0][0]:
+                    buzzer_command = self.buzzer_stack.pop(0)
+                    self.execute_command(buzzer_command[1:])
+
             # check each module
             # if a module with very high priority is encountered, execute immediately
             for module in self.config['modules']:
                 if module is not None:
-                    priority, command = self.__getattribute__('module_' + module)(module)
+                    if 'buzzer' not in module:
+                        priority, command = self.__getattribute__('module_' + module)(module)
 
-                    # add the commands to the stack
-                    if command is not None:
-                        self.module_history.append(module)
-                        self.module_history_timestamps.append(self.timenow)
-                        if type(command[0]) is not list: # we have only 1 command
-                            command = [command,]
+                        # add the commands to the stack
+                        if command is not None:
+                            self.module_history.append(module)
+                            self.module_history_timestamps.append(self.timenow)
+                            if type(command[0]) is not list: # we have only 1 command
+                                command = [command,]
 
-                        if 'play_buzzer' not in command[0]:
                             for i, c in enumerate(command):
                                 p = self.fix_priority(priority)
                                 p = self.fix_priority(p+i)
                                 self.action_stack.insert(p, c)
-                        else:
-                            for i, c in enumerate(command[::-1]):
-                                self.buzzer_stack.insert(0, c)
-                    
-                    # go straight to execution when presented with an immediate priority command
-                    if priority == 0:
-                        continue
+                        
+                        # go straight to execution when presented with an immediate priority command
+                        if priority == 0:
+                            continue
 
             if len(self.action_stack) > 0:
                 pass
-                #print(self.action_stack)
-
-            # execute command from the top of the buzzer stack
-            if len(self.buzzer_stack) > 0:
-                print(self.buzzer_stack)
-                if time.time() > self.buzzer_stack[0][0]:
-                    buzzer_command = self.buzzer_stack.pop(0)
-                    self.execute_command(buzzer_command[1:])
+                print(self.action_stack)
 
             # execute command from the top of the stack
             if self.takeoff and len(self.action_stack) > 0:
@@ -268,25 +271,15 @@ class Braiten_Fly(object):
         ranges = self.sensor_history['Range'][['front', 'left', 'back', 'right']].values[-1]
 
         if ranges[0] < distance_threshold:
-            return 1, [[0, 'play_buzzer', [12, 5000, 0, 0]], [time.time()+0.5, 'play_buzzer', [0, 500, 0, 0]]]
-        else:
-            return None, None
-
-    def module_buzzer_accelsideways(self, module_name):
-        """
-        If crazyflie accelerates sideways, and no sounds are cued, then play a sound
-
-        :return:
-        commands    : (list) of four signed command actions
-        """
-
-        parameters = self.config[module_name]
-        yacc_threshold = parameters[0]
-
-        yacc = np.abs(self.sensor_history['StateEst'][['ay']].values[-1][0])
-
-        if yacc > yacc_threshold: # going backward: play sound
-            return 1, [[0, 'play_buzzer', [12, 3000, 0, 0]], [time.time()+0.1, 'play_buzzer', [0, 500, 0, 0]]]
+            self.buzzer_stack = []
+            return 1, [ [0, 'play_buzzer', [12, 2000, 0, 0]],
+                        [time.time()+0.05, 'play_buzzer', [12, 3000, 0, 0]],
+                        [time.time()+0.1, 'play_buzzer', [12, 4000, 0, 0]],
+                        [time.time()+0.15, 'play_buzzer', [12, 5000, 0, 0]],
+                        [time.time()+0.2, 'play_buzzer', [12, 6000, 0, 0]],
+                        [time.time()+0.25, 'play_buzzer', [12, 7000, 0, 0]],
+                        [time.time()+0.3, 'play_buzzer', [12, 8000, 0, 0]],
+                        [time.time()+0.35, 'play_buzzer', [0, 500, 0, 0]]]
         else:
             return None, None
 
