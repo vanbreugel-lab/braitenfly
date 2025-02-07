@@ -1,15 +1,45 @@
 # braid volume trigger configuration
+# Specifies which crazyflies to connect to, and what to name them in ROS
 
-modules:         
-  - 'buzzer_frontrangefinder'
+
+modules:
+  - #'buzzer_frontrangefinder'
   - 'land_toprangefinder'
   - 'retreat_allrangefinders'
-  - 'orient_rangefinders'
-  - 'approach_frontrangefinder'
+  - #'orient_rangefinders'
+  - #'approach_frontrangefinder'
   - #'circleright_topfronttrangefinder_delayed'
   - #'land_bottomrangefinder'
   - #'retreat_toprangefinder'
+  - 'buzzer_movelaterally'
+  - #'buzzer_changealtitude'
+  - 'siderangefinders_changealtitude'
+  - 'buzzer_inactivity'
 
+buzzer_movelaterally:
+  - 4000 # sound frequency
+  - 0 # duration of sound
+  - "right" # direction: choose between "left","right", "forward", "backward"
+
+buzzer_changealtitude:
+  - 5000 # sound frequency
+  - 0.5 # duration of sound
+  - "up" # direction: choose between "up", "down"
+  
+
+buzzer_inactivity:
+  - 10     # inactivity_threshold - X seconds of inactivity before the buzzer sounds
+  - 7000   # buzzer_frequency - Frequency/pitch of the buzzer sound
+  - 1      # buzzer_duration - Duration of the buzzer sound
+
+siderangefinders_changealtitude:
+  - 300 # distance threshold, mm
+  - 1 # which sensor controls upward motion: can be front: 0, left: 1, back: 2, right: 3
+  - 0.1 # upward distance to move, m
+  - 3 # which sensor controls downward motion: can be front: 0, left: 1, back: 2, right: 3 
+  - 0.2 # downward distance to move, m
+  
+  
 buzzer_frontrangefinder:
   - 200 # distance threshold, mm
 #  - 12 # sound

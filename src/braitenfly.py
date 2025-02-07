@@ -215,7 +215,7 @@ class Braiten_Fly(object):
                         if command is not None:
                             for i, c in enumerate(command[::-1]):
                                 self.buzzer_stack.insert(0, c)
-            
+                            self.module_history_timestamps.append(self.buzzer_stack[-1][0])             
             # execute command from the top of the buzzer stack
             if len(self.buzzer_stack) > 0:
                 #print(self.buzzer_stack)
@@ -528,6 +528,148 @@ class Braiten_Fly(object):
         else:
             return None, None
 
+
+
+# ------------------------------------ jaleesa's modules -----------------------------------------------------------------------------------#
+
+            
+    def module_buzzer_inactivity(self, module_name):
+        """
+        If no actions have been performed in the last X seconds, trigger the buzzer.
+
+        :return:
+        priority    : low 
+        commands    : (list) of buzzer commands
+        """
+
+        parameters = self.config[module_name]
+        inactivity_threshold, buzzer_frequency, buzzer_duration = parameters
+ 
+        current_time = rospy.get_time()
+
+
+       # If no actions have been performed in the last X seconds, trigger the buzzer
+        if (self.module_history_timestamps != [])  and (current_time - self.module_history_timestamps[-1]) > inactivity_threshold:
+            #print('triggered inactivity buzzer, time since last action is', (current_time - self.module_history_timestamps[-1]) )
+            return -1, [ [time.time(), 'play_buzzer', [12, buzzer_frequency, buzzer_duration, 0]],
+                        [time.time()+0.05, 'play_buzzer', [0, 500, 0, 0]],]
+        else:
+            return None, None
+
+
+
+
+    def module_siderangefinders_changealtitude(self, module_name):
+        """
+        If an object is on one side of range finder, move up by a specified amount. If an object is on other side of range finder, move down by another specified amount
+
+
+        """
+
+        parameters = self.config[module_name]
+        distance_threshold, sensor_up, up_distance, sensor_down, down_distance = parameters
+
+        ranges = self.sensor_history['Range'][['front', 'left', 'back', 'right']].values[-1]
+
+
+        # check sensor values give sensor history
+        commands_numerical = [0, 0,]
+        commands_action = []
+
+        if ranges[sensor_up] < distance_threshold:
+            commands_numerical[0] += up_distance
+            commands_action.append(['up', float(np.abs(commands_numerical[0])) ])
+        if ranges[sensor_down] < distance_threshold:
+            commands_numerical[1] += down_distance
+            commands_action.append(['down', float(np.abs(commands_numerical[1])) ])
+
+        if len(commands_action) > 0:
+            return 1, commands_action
+        else:
+            return None, None
+
+
+    def module_buzzer_changealtitude(self, module_name):
+        """
+        If increasing or decreasing in altitude, play a sound - student chooses whether up or downward motion causes the noise
+
+
+        """
+
+        parameters = self.config[module_name]
+        buzzer_frequency, buzzer_duration, triggering_direction = parameters
+
+        position1 = self.sensor_history['KalmanPositionEst'][['stateX', 'stateY', 'stateZ']].values[-1]
+        position2 = self.sensor_history['KalmanPositionEst'][['stateX', 'stateY', 'stateZ']].values[-10]
+   
+        
+        
+        if (triggering_direction=="up") and (position1-position2)[2] > 0.03: # if crazyflie went up
+            #print('z position change:', (position1-position2)[2])
+            self.buzzer_stack = []
+            return 1, [ [time.time(), 'play_buzzer', [12, buzzer_frequency, buzzer_duration, 0]],
+                        [time.time()+0.05, 'play_buzzer', [0, 500, 0, 0]]]
+
+                                          
+        if (triggering_direction=="down") and (position1-position2)[2] < -0.03: # if crazyflie went down
+            #print('z position change:', (position1-position2)[2])
+            self.buzzer_stack = []
+            return 1, [ [time.time(), 'play_buzzer', [12, buzzer_frequency, buzzer_duration, 0]],
+                        [time.time()+0.05, 'play_buzzer', [0, 500, 0, 0]]]
+
+        else:
+            return None, None
+
+    def module_buzzer_movelaterally(self, module_name):
+        """
+        If going a predefined direction, play a sound
+
+        """
+
+        parameters = self.config[module_name]
+        buzzer_frequency, buzzer_duration, triggering_direction = parameters
+
+        position1 = self.sensor_history['KalmanPositionEst'][['stateX', 'stateY', 'stateZ']].values[-1]
+        position2 = self.sensor_history['KalmanPositionEst'][['stateX', 'stateY', 'stateZ']].values[-10]
+
+        
+        if (triggering_direction=="right") and (position1-position2)[1] > 0.1: 
+            #print(triggering_direction, 'position change:', (position1-position2)[1])
+            self.buzzer_stack = []
+            return 1, [ [time.time(), 'play_buzzer', [12, buzzer_frequency+2000, buzzer_duration, 0]],
+                        [time.time()+0.05, 'play_buzzer', [12, buzzer_frequency+1000, 0, 0]],
+                        [time.time()+0.1, 'play_buzzer', [12, buzzer_frequency, 0, 0]],                        
+                        [time.time()+0.15, 'play_buzzer', [0, 500, 0, 0]]]
+
+                                         
+        if (triggering_direction=="left") and (position1-position2)[1] < -0.1:
+            #print(triggering_direction, 'position change:', (position1-position2)[1])
+            self.buzzer_stack = []
+            return 1, [ [time.time(), 'play_buzzer', [12, buzzer_frequency+2000, buzzer_duration, 0]],
+                        [time.time()+0.05, 'play_buzzer', [12, buzzer_frequency+1000, 0, 0]],
+                        [time.time()+0.1, 'play_buzzer', [12, buzzer_frequency, 0, 0]],                        
+                        [time.time()+0.15, 'play_buzzer', [0, 500, 0, 0]]]
+        
+        if (triggering_direction=="forward") and (position1-position2)[0] > 0.1: 
+            #print(triggering_direction, 'position change:', (position1-position2)[0])
+            self.buzzer_stack = []
+            return 1, [ [time.time(), 'play_buzzer', [12, buzzer_frequency+2000, buzzer_duration, 0]],
+                        [time.time()+0.05, 'play_buzzer', [12, buzzer_frequency+1000, 0, 0]],
+                        [time.time()+0.1, 'play_buzzer', [12, buzzer_frequency, 0, 0]],                        
+                        [time.time()+0.15, 'play_buzzer', [0, 500, 0, 0]]]
+                                          
+        if (triggering_direction=="backward") and (position1-position2)[0] < -0.1:
+            #print(triggering_direction, 'position change:',(position1-position2)[0])
+            self.buzzer_stack = []
+            return 1, [ [time.time(), 'play_buzzer', [12, buzzer_frequency+2000, 0, 0]],
+                        [time.time()+0.05, 'play_buzzer', [12, buzzer_frequency+1000, 0, 0]],
+                        [time.time()+0.1, 'play_buzzer', [12, buzzer_frequency, 0, 0]],                        
+                        [time.time()+0.15, 'play_buzzer', [0, 500, 0, 0]]]
+        else:
+            return None, None
+            
+# -----------------------------------------------------------------------------------------------------------------------#            
+            
 ################################################################################
 
 if __name__ == '__main__':    
