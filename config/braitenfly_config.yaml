@@ -3,7 +3,8 @@
 
 
 modules:
-  - buzzer_roll
+  - buzzer_ramp
+  - #buzzer_roll
   - #'buzzer_frontrangefinder'
   - 'land_toprangefinder'
   - 'retreat_allrangefinders'
@@ -79,4 +80,8 @@ circleright_topfronttrangefinder_delayed:
 
 buzzer_roll:
   - 0
+
+buzzer_ramp:
+  - 800  # minimum left + right range sum to trigger
+
 

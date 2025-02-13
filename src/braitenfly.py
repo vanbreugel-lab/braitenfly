@@ -670,7 +670,7 @@ class Braiten_Fly(object):
 
     def module_buzzer_roll(self, module_name):
         """
-        Module buzzer frewuency based on roll, but only when not flying.
+        Module buzzer frequency based on roll, but only when not flying.
 
         :return:
         commands    : (list) of four signed command actions
@@ -680,7 +680,33 @@ class Braiten_Fly(object):
 
         if self.buzzer and (not self.takeoff):
             self.buzzer_stack = []
-            return 1, [ [0, 'play_buzzer', [14, 2000, 0, 0]] ]
+            return 0, [ [0, 'play_buzzer', [14, 2000, 0, 0]] ]
+        else:
+            return None, None
+
+    def module_buzzer_ramp(self, module_name):
+        """
+        Module buzzer ramp speed based on left vs right sensor distance, but only when not flying.
+
+        :return:
+        commands    : (list) of four signed command actions
+        """
+
+        parameters = self.config[module_name]
+        distance_sum_thresh = parameters[0]
+        front, left, back, right = self.sensor_history['Range'][['front', 'left', 'back', 'right']].values[-1]
+
+        if self.buzzer and (not self.takeoff):
+            if (right + back) < distance_sum_thresh:
+                if left > right:
+                    command = [[0, 'play_buzzer', [8, 2000, 0, 0]]]  # slow ramp
+                else:
+                    command = [[0, 'play_buzzer', [9, 2000, 0, 0]]]  # fast ramp
+            else:
+                command = [[0, 'play_buzzer', [0, 2000, 0, 0]]]
+
+            self.buzzer_stack = []
+            return 1, command
         else:
             return None, None
             
