@@ -683,7 +683,7 @@ if __name__ == '__main__':
     parser.add_option("--crazyflie_number", type="int", dest="crazyflie_number", default=0,
                         help="which crazyflie to connect to on server, default 0")
     parser.add_option("--buzzer", type="int", dest="buzzer", default=1,
-                        help="buzzer (0 or 1), default 01 = will use buzzer")
+                        help="buzzer (0 or 1), default 1 = will use buzzer")
 
     (options, args) = parser.parse_args()
 
