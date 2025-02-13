@@ -3,6 +3,7 @@
 
 
 modules:
+  - buzzer_roll
   - #'buzzer_frontrangefinder'
   - 'land_toprangefinder'
   - 'retreat_allrangefinders'
@@ -11,10 +12,10 @@ modules:
   - #'circleright_topfronttrangefinder_delayed'
   - #'land_bottomrangefinder'
   - #'retreat_toprangefinder'
-  - 'buzzer_movelaterally'
+  - #'buzzer_movelaterally'
   - #'buzzer_changealtitude'
-  - 'siderangefinders_changealtitude'
-  - 'buzzer_inactivity'
+  - #'siderangefinders_changealtitude'
+  - #'buzzer_inactivity'
 
 buzzer_movelaterally:
   - 4000 # sound frequency
@@ -75,3 +76,7 @@ circleright_topfronttrangefinder_delayed:
   - 3   # time history
   - 500 # distance threshold for front rangefinder
   - 0.3 # circle radius, m
+
+buzzer_roll:
+  - 0
+

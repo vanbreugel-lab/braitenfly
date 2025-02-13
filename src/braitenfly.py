@@ -667,6 +667,22 @@ class Braiten_Fly(object):
                         [time.time()+0.15, 'play_buzzer', [0, 500, 0, 0]]]
         else:
             return None, None
+
+    def module_buzzer_roll(self, module_name):
+        """
+        If an object is nearby to the forward facing range finder, play a sound for 0.5 second
+
+        :return:
+        commands    : (list) of four signed command actions
+        """
+
+        parameters = self.config[module_name]
+
+        if self.buzzer and (not self.takeoff):
+            self.buzzer_stack = []
+            return 1, [ [0, 'play_buzzer', [14, 2000, 0, 0]] ]
+        else:
+            return None, None
             
 # -----------------------------------------------------------------------------------------------------------------------#            
             
