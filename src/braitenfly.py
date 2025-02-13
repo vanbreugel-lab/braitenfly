@@ -670,7 +670,7 @@ class Braiten_Fly(object):
 
     def module_buzzer_roll(self, module_name):
         """
-        If an object is nearby to the forward facing range finder, play a sound for 0.5 second
+        Module buzzer frewuency based on roll, but only when not flying.
 
         :return:
         commands    : (list) of four signed command actions
