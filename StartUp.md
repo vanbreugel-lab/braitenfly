@@ -58,12 +58,12 @@ These reflexes are programmed as 'modules' that the user can modify.
 
 5. **Run Braitenfly without taking off**. If you want to run *Braitenfly* without taking off, and/or without the buzzer active you can change the `takeoff` and/or `buzzer` values to 0 and rerun `rosrun braitenfly braitenfly.py --takeoff=0 --buzzer=0`.
 
-6. Note that anytime you want to change modules/parameters you must restart *Braitenfly*. First land the crazyflie, then click `ctrl + C` n the window used to run `rosrun braitenfly braitenfly.py`, and then rerun the command. You will also have to do this in the event of a crash.
+6. Note that anytime you want to change modules/parameters you must restart *Braitenfly*. First land the crazyflie, then click `ctrl + C` n the window used to run `rosrun braitenfly braitenfly.py`, and then rerun the command. You will also have to do this in the event of a crash. Note that you may also have to restart you crazyflie drone.
 
 ## Troubleshooting
 
 ### Turning off the buzzer
-In the event of a crash, sometimes the buzzer may be stuck in an `on` state. To stop it, open a nw terminal and run
+In the event of a crash, sometimes the buzzer may be stuck in an `on` state. To stop it, open a new terminal and run
 `rosservice call /play_buzzer '{number: 0, frequency: 1000, duration: 0.01, stop: 1}'
 `
 `
