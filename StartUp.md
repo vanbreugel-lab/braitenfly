@@ -29,10 +29,14 @@ This step will connect your crazyflie to your machine without `cfclient` & is re
 ## Running Braitenfly
 *Braitenfly* will fly
 
-1. **Edit active modules**. Navigate to `/home/crazyflie/catkin_ws/src/braitenfly/config` and open `braitenfly_config.yaml` by double-clicking. This file sets what modules are activated when *Braitenfly* is running. You choose what modules to activate/deactivate by modifying the `modules` list. ![modules.png](img/modules.png)  
-Placing a `#` in front of a module will deactivate it. In this example, only the modules `buzzer_frontrangefinder` & `orient_rangefinders` are active.
-2. **Edit module parameters**. In the same `braitenfly_config.yaml` file you can edit module parameters. Each module has a corresponding list of parameters (which are typically numbers) that affect the behavior of the module. For instance, the `approach_frontrangefinder` module has three parameters, which affect the thresholds for approaching objects.  ![module_parameters.png](img/module_parameters.png)  
-The user can customize these parameters, although it is recommended to start with the defaults.
+1. **Edit active modules**. Navigate to `/home/crazyflie/catkin_ws/src/braitenfly/config` and open `braitenfly_config.yaml` by double-clicking. This file sets what modules are activated when *Braitenfly* is running. You choose what modules to activate/deactivate by modifying the `modules` list. Placing a `#` in front of a module will deactivate it. In this example, only the modules `buzzer_frontrangefinder` & `orient_rangefinders` are active.
+
+    ![modules.png](img/modules.png)
+
+2. **Edit module parameters**. In the same `braitenfly_config.yaml` file you can edit module parameters. Each module has a corresponding list of parameters (which are typically numbers) that affect the behavior of the module. For instance, the `approach_frontrangefinder` module has three parameters, which affect the thresholds for approaching objects. The user can customize these parameters, although it is recommended to start with the defaults.
+
+    ![module_parameters.png](img/module_parameters.png)  
+
 3. **Run Braitenfly & fly drone**. Place your drone in a safe & level area. Open a new terminal and run the command `rosrun braitenfly braitenfly.py --takeoff=1 --buzzer=1`. This will initialize *Braitenfly* and cause your drone to takeoff with the modules in `braitenfly_config.yaml` active. 
 4. **Landing**. To land, place your hand (or other object) over the top of the crazyflie.
 5. **Run Braitenfly without taking off**. If you want to run *Braitenfly* without taking off, and/or without the buzzer active you can change the `takeoff` and/or `buzzer` values to 0 and rerun `rosrun braitenfly braitenfly.py --takeoff=0 --buzzer=0`. 
