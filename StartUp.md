@@ -35,7 +35,9 @@ This step will connect your crazyflie to your machine without `cfclient` & is re
 
 1. Ensure `cfclient` has closed. You may need to close the terminal window you used to start it.
 
-2. Navigate to `/home/catkin_ws/src/rospy_crazyflie/config` and open `config.yaml` in a text editor by double-clicking.  Edit the `crazyflie1` ID to match the ID that appeared in `cfclient`. ![img.png](img/crazyflie_id.png) You only have to change this once everytime you want to use a new Crazyflie drone, otherwise this can be left alone.
+2. Navigate to `/home/catkin_ws/src/rospy_crazyflie/config` and open `config.yaml` in a text editor by double-clicking.  Edit the `crazyflie1` ID to match the ID that appeared in `cfclient`. You only have to change this once everytime you want to use a new Crazyflie drone, otherwise this can be left alone.
+
+   ![img.png](img/crazyflie_id.png) 
 
 3. Open a new terminal window and run `roslaunch rospy_crazyflie default.launch`. Within about 10 seconds the terminal should print `Connected to radio://0/78/2M/E7E7E7E7E9`. If you don't see this print, or there are other errors, double check that you correctly entered the crazyflie ID in the `config.yaml` file, that your crazyflie is on, and that you radio is connected to the virtual machine (and not the host).
 
