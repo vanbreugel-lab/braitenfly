@@ -3,7 +3,8 @@
 
 
 modules:
-  - buzzer_ramp
+  - buzzer_homing
+  - #buzzer_ramp
   - #buzzer_roll
   - #'buzzer_frontrangefinder'
   - 'land_toprangefinder'
@@ -82,6 +83,9 @@ buzzer_roll:
   - 0
 
 buzzer_ramp:
+  - 800  # minimum left + right range sum to trigger
+
+buzzer_homing:
   - 800  # minimum left + right range sum to trigger
 
 

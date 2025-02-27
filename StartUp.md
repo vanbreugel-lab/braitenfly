@@ -10,7 +10,9 @@ This step is only required if you are using a computer running Windows. Skip thi
 
 3. Wait for the virtual machine to startup and then login. The password is `crazyflie`.
 
-4. Connect the Crazyflie radio. Click `Player > Removable Devices > Crazyflie Radio > Connect (Disconnect from host)` in the top left. You may see a warning popup that informs you that the radio is being disconnected from you host machine. Afterward, verify that the Crazyflie radio shows up in the list of connected device (should have a check mark next to it under `Player > Removable Devices`).
+4. Connect the Crazyflie radio. Click `Player > Removable Devices > Nordic ASA Crazyradio 2.0 > Connect (Disconnect from host)` in the top left. You may see a warning popup that informs you that the radio is being disconnected from you host machine. Afterward, verify that the Crazyflie radio shows up in the list of connected device (should have a check mark next to it under `Player > Removable Devices`).
+
+   ![crazyradio.png](img/crazyradio.png)
 
 ## Scan for Crazyflies & test connection/flight status
 In this section, you will ensure your crazyflie and radio are working correctly, and that you can successfully connect to your crazyflie.
@@ -20,7 +22,7 @@ In this section, you will ensure your crazyflie and radio are working correctly,
 
 3. Run the command `cfclient`. You should see a window pop up. ![img.png](img/cfclient_no_connection.png)
 
-4. Click the `Scan` button at the top left. You should see a Crazyflie ID appear. Note that sometimes the Crazyflie ID will already be found, and clicking `Scan` will not be needed. Note down this full interface ID. It should look something like thi `radio://0/3/2M/E7E7E7E7E7'`. ![img.png](img/cfclient_id.png)
+4. Click the `Scan` button at the top left. You should see a Crazyflie ID appear. Note that sometimes the Crazyflie ID will already be found, and clicking `Scan` will not be needed. Note down this full interface ID. It should look something like this `radio://0/78/2M/E7E7E7E7E9'`. ![img.png](img/cfclient_id.png)
 
 5. Click `Connect`. You should see `connected` appear at the top-middle of the window, as well as a few other changes. Note the red emergency stop button is now available. If you pick up your drone and rotate it you should see the blue/black  attitude visualizer start to move. ![img.png](img/cfclient_connection.png)
 
@@ -35,7 +37,9 @@ This step will connect your crazyflie to your machine without `cfclient` & is re
 
 2. Navigate to `/home/catkin_ws/src/rospy_crazyflie/config` and open `config.yaml` in a text editor by double-clicking.  Edit the `crazyflie1` ID to match the ID that appeared in `cfclient`. ![img.png](img/crazyflie_id.png) You only have to change this once everytime you want to use a new Crazyflie drone, otherwise this can be left alone.
 
-3. Open a new terminal window and run `roslaunch rospy_crazyflie default.launch`. Within about 10 seconds the terminal should print `successfully connected on radio...`. If you don't see this print, or there are other errors, double check that you correctly entered the crazyflie ID in the `config.yaml` file, that your crazyflie is on, and that you radio is connected to the virtual machine (and not the host).
+3. Open a new terminal window and run `roslaunch rospy_crazyflie default.launch`. Within about 10 seconds the terminal should print `Connected to radio://0/78/2M/E7E7E7E7E9`. If you don't see this print, or there are other errors, double check that you correctly entered the crazyflie ID in the `config.yaml` file, that your crazyflie is on, and that you radio is connected to the virtual machine (and not the host).
+
+   ![connected_terminal.png](img/connected_terminal.png)
 
 4. **If you Crash**. If you happen to crash you crazyflie, you will likely have to restart this service by clicking `ctrl + C` in the terminal window used to run `roslaunch rospy_crazyflie default.launch`, and then rerunning the command.
 
@@ -58,7 +62,7 @@ These reflexes are programmed as 'modules' that the user can modify.
 
 5. **Run Braitenfly without taking off**. If you want to run *Braitenfly* without taking off, and/or without the buzzer active you can change the `takeoff` and/or `buzzer` values to 0 and rerun `rosrun braitenfly braitenfly.py --takeoff=0 --buzzer=0`.
 
-6. Note that anytime you want to change modules/parameters you must restart *Braitenfly*. First land the crazyflie, then click `ctrl + C` n the window used to run `rosrun braitenfly braitenfly.py`, and then rerun the command. You will also have to do this in the event of a crash. Note that you may also have to restart you crazyflie drone.
+6. Note that anytime you want to change modules/parameters you must restart *Braitenfly*. First land the crazyflie, then click `ctrl + C` in the window used to run `rosrun braitenfly braitenfly.py`, and then rerun the command. You will also have to do this in the event of a crash. Note that you may also have to restart you crazyflie drone.
 
 ## Troubleshooting
 

@@ -191,6 +191,8 @@ class Braiten_Fly(object):
         else:
             print('Not taking off!!')
 
+        self.start_position = self.sensor_history['KalmanPositionEst'][['stateX', 'stateY', 'stateZ']].values[-1]
+
         while not rospy.is_shutdown():
             self.timenow = rospy.get_time()
 
@@ -248,7 +250,7 @@ class Braiten_Fly(object):
 
             if len(self.action_stack) > 0:
                 pass
-                print(self.action_stack)
+                # print(self.action_stack)
 
             # execute command from the top of the stack
             if self.takeoff and len(self.action_stack) > 0:
@@ -677,10 +679,9 @@ class Braiten_Fly(object):
         """
 
         parameters = self.config[module_name]
-
+        self.buzzer_stack = []
         if self.buzzer and (not self.takeoff):
-            self.buzzer_stack = []
-            return 0, [ [0, 'play_buzzer', [14, 2000, 0, 0]] ]
+            return 0, [ [1, 'play_buzzer', [14, 2000, 0, 0]] ]
         else:
             return None, None
 
@@ -696,8 +697,9 @@ class Braiten_Fly(object):
         distance_sum_thresh = parameters[0]
         front, left, back, right = self.sensor_history['Range'][['front', 'left', 'back', 'right']].values[-1]
 
+        self.buzzer_stack = []
         if self.buzzer and (not self.takeoff):
-            if (right + back) < distance_sum_thresh:
+            if (right + left) < distance_sum_thresh:
                 if left > right:
                     command = [[0, 'play_buzzer', [8, 2000, 0, 0]]]  # slow ramp
                 else:
@@ -705,11 +707,50 @@ class Braiten_Fly(object):
             else:
                 command = [[0, 'play_buzzer', [0, 2000, 0, 0]]]
 
-            self.buzzer_stack = []
+            return 0, command
+        else:
+            return None, None
+
+    def module_buzzer_homing(self, module_name):
+        """
+        Module buzzer ramp speed based on left vs right sensor distance, but only when not flying.
+
+        :return:
+        commands    : (list) of four signed command actions
+        """
+
+        parameters = self.config[module_name]
+
+
+        x0, y0, z0 = self.start_position
+
+        x, y, z = self.sensor_history['KalmanPositionEst'][['stateX', 'stateY', 'stateZ']].values[-1]
+        distance = np.sqrt((x - x0)**2 + (y - y0)**2)
+
+        low_frequency = 20
+        high_frequency = 5000
+
+        low_distance = 0
+        high_distance = 2
+
+        frequency = int(map_range(distance, low_distance, high_distance, low_frequency, high_frequency))
+        if frequency > high_frequency:
+            frequency = high_frequency
+
+        if self.buzzer:
+            command = [[time.time(), 'play_buzzer', [12, frequency, 0, 0]]]
+            print(np.round(distance, 3), frequency)
+
             return 1, command
         else:
             return None, None
-            
+
+
+def map_range(x, old_min, old_max, new_min, new_max):
+    return (x - old_min) / (old_max - old_min) * (new_max - new_min) + new_min
+
+
+
 # -----------------------------------------------------------------------------------------------------------------------#            
             
 ################################################################################
