@@ -100,14 +100,6 @@ class Braiten_Fly(object):
                                 'Range', # (unit16_t) range.back, range.front, range.left, range.right, range.up, range.zrange
                                 ]
 
-        self.sensor_subscribers = {}
-        for topic_name in self.sensor_topics:
-            self.sensor_subscribers[topic_name] = rospy.Subscriber(self.crazyflie_name + '/' + topic_name, 
-                                                                   eval(topic_name), # topic names are also message types.. yes, eval() is bad coding practice 
-                                                                   self.sensor_callback,
-                                                                   topic_name, # send topic name to call back
-                                                                   queue_size = 10,
-                                                                   ) 
         ############################
 
         self.sensor_history = {topic_name: None for topic_name in self.sensor_topics}
@@ -119,6 +111,18 @@ class Braiten_Fly(object):
 
         self.buzzer_stack = [] # list of lists, each sublist should be [timestamp, 'cfclient action', parameters], where timestamp says the time at which to execute
         self.buzzer_stack_length = 100
+
+        ############################
+
+        self.sensor_subscribers = {}
+        for topic_name in self.sensor_topics:
+            self.sensor_subscribers[topic_name] = rospy.Subscriber(self.crazyflie_name + '/' + topic_name, 
+                                                                   eval(topic_name), # topic names are also message types.. yes, eval() is bad coding practice 
+                                                                   self.sensor_callback,
+                                                                   topic_name, # send topic name to call back
+                                                                   queue_size = 10,
+                                                                   ) 
+        
 
     def wait(self):
         while self.cfclient.action_in_progress():
@@ -627,6 +631,9 @@ class Braiten_Fly(object):
         If going a predefined direction, play a sound
 
         """
+
+        if len(self.sensor_history['KalmanPositionEst'][['stateX', 'stateY', 'stateZ']].values) < 11:
+            return None, None
 
         parameters = self.config[module_name]
         buzzer_frequency, buzzer_duration, triggering_direction = parameters
