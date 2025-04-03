@@ -3,16 +3,14 @@
 
 
 modules:
-  - buzzer_homing
-  - #buzzer_ramp
-  - #buzzer_roll
+  - #'buzzer_homing'
+  - #'buzzer_ramp'
+  - 'buzzer_roll'
   - #'buzzer_frontrangefinder'
   - 'land_toprangefinder'
   - 'retreat_allrangefinders'
-  - #'orient_rangefinders'
+  - 'orient_rangefinders'
   - #'approach_frontrangefinder'
-  - #'circleright_topfronttrangefinder_delayed'
-  - #'land_bottomrangefinder'
   - #'retreat_toprangefinder'
   - #'buzzer_movelaterally'
   - #'buzzer_changealtitude'
