@@ -707,7 +707,7 @@ class Braiten_Fly(object):
         commands    : (list) of four signed command actions
         """
 
-        parameters = self.config[module_name]
+        # parameters = self.config[module_name]
         self.buzzer_stack = []
         if self.buzzer and (not self.takeoff):
             return 0, [ [1, 'play_buzzer', [14, 2000, 0, 0]] ]
