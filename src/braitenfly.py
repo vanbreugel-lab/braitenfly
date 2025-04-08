@@ -758,6 +758,7 @@ class Braiten_Fly(object):
         distance = np.sqrt((x - x0)**2 + (y - y0)**2)
 
         frequency = int(map_range(distance, low_distance, high_distance, low_frequency, high_frequency))
+
         if frequency > high_frequency:
             frequency = high_frequency
 
@@ -768,8 +769,9 @@ class Braiten_Fly(object):
             frequency = low_frequency
 
         if self.buzzer:
-            command = [[time.time(), 'play_buzzer', [12, frequency, 0, 0]]]
             print(np.round(distance, 3), frequency)
+            # return None, None
+            command = [[time.time(), 'play_buzzer', [12, frequency, 0, 0]]]
 
             return 1, command
         else:
@@ -805,7 +807,7 @@ class Braiten_Fly(object):
         if frequency > high_frequency:
             frequency = high_frequency
 
-        self.buzzer_stack = []
+        # self.buzzer_stack = []
         if self.buzzer:
             # return None, None
             # print(spin, frequency)
