@@ -77,7 +77,7 @@ class Braiten_Fly(object):
         if self.buzzer:
             print('Playing sound...', end='')
             # self.cfclient.play_buzzer(number=11, frequency=500, duration=3.0, stop=True)
-            command = ('play_buzzer', [11, 500, 1.0, True])
+            command = ('play_buzzer', [11, 500, 2.0, True])
             self.execute_command(command)
             print('done.')
 
@@ -813,6 +813,38 @@ class Braiten_Fly(object):
             # print(spin, frequency)
             command = [[time.time(), 'play_buzzer', [12, frequency, 0, 0]]]
             return 1, command
+        else:
+            return None, None
+
+
+    def module_ballerina(self, module_name):
+        """
+        Spin like a ballerina.
+
+        Low priority, open loop command
+
+        :return:
+        priority    : (int) 1 or 0 indicating high or low priority, respectively
+        action      : None
+        commands    : (list) of four signed command actions
+        """
+
+        parameters = self.config[module_name]
+        command_turnangle = parameters
+
+        ranges = self.sensor_history['Range'][['front', 'left', 'back', 'right']].values[-1]
+
+        if np.abs(self.sensor_history['Gyro']['z'].values[-1]) < 50:
+            command_turnangle = command_turnangle
+        else:
+            command_turnangle = 0
+
+        turnangle = int(command_turnangle)
+
+        if turnangle > 0:
+            return 0, ['turn_left', int(np.abs(turnangle))]
+        elif turnangle < 0:
+            return 1, ['turn_right', int(np.abs(turnangle))]
         else:
             return None, None
 

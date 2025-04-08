@@ -1,23 +1,40 @@
-# braid volume trigger configuration
-# Specifies which crazyflies to connect to, and what to name them in ROS
-
 
 modules:
+  - #'buzzer_roll'
+  - #'buzzer_spin'
   - #'buzzer_homing'
   - #'buzzer_ramp'
-  - #'buzzer_roll'
   - #'buzzer_frontrangefinder'
-  - #'land_toprangefinder'
+  - #'buzzer_movelaterally'
+  - #'buzzer_changealtitude'
+  - #'buzzer_inactivity'
+  - 'land_toprangefinder'
   - #'retreat_allrangefinders'
   - #'orient_rangefinders'
   - #'approach_frontrangefinder'
   - #'retreat_toprangefinder'
-  - #'buzzer_movelaterally'
-  - #'buzzer_changealtitude'
   - #'siderangefinders_changealtitude'
-  - #'buzzer_inactivity'
-  - #'buzzer_spin'
+  - 'ballerina'
   - 'buzzer_quiet_toprangefinder'
+
+
+buzzer_spin:
+  - 0  # low frequency, hz
+  - 2000  # high frequency, hz
+  - 10  # low spin rate, deg/s
+  - 2000  # high spin rate, deg/s
+  -
+buzzer_homing:
+  - 5  # low frequency, hz
+  - 2000  # high frequency, hz
+  - 0  # low distance, meters
+  - 3  # high distance, meters
+
+buzzer_ramp:
+  - 800  # minimum left + right range sum to trigger
+
+buzzer_frontrangefinder:
+  - 200 # distance threshold, mm
 
 buzzer_movelaterally:
   - 4000 # sound frequency
@@ -28,7 +45,6 @@ buzzer_changealtitude:
   - 5000 # sound frequency
   - 0.5 # duration of sound
   - "up" # direction: choose between "up", "down"
-  
 
 buzzer_inactivity:
   - 10     # inactivity_threshold - X seconds of inactivity before the buzzer sounds
@@ -41,14 +57,6 @@ siderangefinders_changealtitude:
   - 0.1 # upward distance to move, m
   - 3 # which sensor controls downward motion: can be front: 0, left: 1, back: 2, right: 3 
   - 0.2 # downward distance to move, m
-  
-  
-buzzer_frontrangefinder:
-  - 200 # distance threshold, mm
-#  - 12 # sound
-#  - 500 # frequency
-#  - 0.01 # duration
-#  - 1 # stop
 
 land_bottomrangefinder:
   - 200 # land threshold, mm
@@ -79,23 +87,8 @@ circleright_topfronttrangefinder_delayed:
   - 500 # distance threshold for front rangefinder
   - 0.3 # circle radius, m
 
-buzzer_roll:
-  - 0
-
-buzzer_ramp:
-  - 800  # minimum left + right range sum to trigger
-
-buzzer_homing:
-  - 5  # low frequency, hz
-  - 2000  # high frequency, hz
-  - 0  # low distance, meters
-  - 3  # high distance, meters
-
-buzzer_spin:
-  - 0  # low frequency, hz
-  - 2000  # high frequency, hz
-  - 10  # low spin rate, deg/s
-  - 2000  # high spin rate, deg/s
+ballerina:
+  -360  # turn angle, deg
 
 buzzer_quiet_toprangefinder:
   - 40 # turn off buzzer threshold, mm
