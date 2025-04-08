@@ -302,9 +302,31 @@ class Braiten_Fly(object):
         land_threshold, = parameters
 
         if self.sensor_history['Range']['up'].values[-1] < land_threshold:
+            # Turn off buzzer first
+            # self.cfclient.play_buzzer(number=12, frequency=5000, duration=0.1, stop=False)
             return 0, [['land',None], ['shutdown',None]]
         else:
             return None, None
+        
+    def module_buzzer_quiet_toprangefinder(self, module_name):
+        """
+        If an object is above, land, turn off the buzzer.
+
+        ending action
+
+        :return: None x3
+        """
+
+        parameters = self.config[module_name]
+        threshold, = parameters
+
+        # self.buzzer_stack = []
+        if self.buzzer and (self.sensor_history['Range']['up'].values[-1] < threshold):
+            print('QUIET!!!!')
+            return 0, [ [0, 'play_buzzer', [0, 2000, 1.0, True]] ]
+        else:
+            return None, None
+
 
     def module_land_bottomrangefinder(self, module_name):
         """
@@ -720,7 +742,7 @@ class Braiten_Fly(object):
 
     def module_buzzer_homing(self, module_name):
         """
-        Module buzzer ramp speed based on left vs right sensor distance, but only when not flying.
+        Module buzzer homing will play a sound at a frequency proportional to the distance from the starting position.
 
         :return:
         commands    : (list) of four signed command actions
@@ -728,21 +750,22 @@ class Braiten_Fly(object):
 
         parameters = self.config[module_name]
 
+        low_frequency, high_frequency, low_distance, high_distance = parameters
 
         x0, y0, z0 = self.start_position
 
         x, y, z = self.sensor_history['KalmanPositionEst'][['stateX', 'stateY', 'stateZ']].values[-1]
         distance = np.sqrt((x - x0)**2 + (y - y0)**2)
 
-        low_frequency = 20
-        high_frequency = 5000
-
-        low_distance = 0
-        high_distance = 2
-
         frequency = int(map_range(distance, low_distance, high_distance, low_frequency, high_frequency))
         if frequency > high_frequency:
             frequency = high_frequency
+
+            # Reset the initial position if at edge of range
+            self.start_position = x, y, z
+
+        if frequency < low_frequency:
+            frequency = low_frequency
 
         if self.buzzer:
             command = [[time.time(), 'play_buzzer', [12, frequency, 0, 0]]]

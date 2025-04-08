@@ -3,19 +3,20 @@
 
 
 modules:
-  - #'buzzer_homing'
+  - 'buzzer_homing'
   - #'buzzer_ramp'
-  - 'buzzer_roll'
+  - #'buzzer_roll'
   - #'buzzer_frontrangefinder'
-  - 'land_toprangefinder'
-  - 'retreat_allrangefinders'
-  - 'orient_rangefinders'
+  - #'land_toprangefinder'
+  - #'retreat_allrangefinders'
+  - #'orient_rangefinders'
   - #'approach_frontrangefinder'
   - #'retreat_toprangefinder'
   - #'buzzer_movelaterally'
   - #'buzzer_changealtitude'
   - #'siderangefinders_changealtitude'
   - #'buzzer_inactivity'
+  - 'buzzer_quiet_toprangefinder'
 
 buzzer_movelaterally:
   - 4000 # sound frequency
@@ -84,6 +85,12 @@ buzzer_ramp:
   - 800  # minimum left + right range sum to trigger
 
 buzzer_homing:
-  - 800  # minimum left + right range sum to trigger
+  - 5  # low frequency, hz
+  - 2000  # high frequency, hz
+  - 0  # low distance, meters
+  - 3  # high distance, meters
+
+buzzer_quiet_toprangefinder:
+  - 100 # turn off buzzer threshold, mm
 
 
