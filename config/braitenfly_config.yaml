@@ -3,7 +3,7 @@
 
 
 modules:
-  - 'buzzer_homing'
+  - #'buzzer_homing'
   - #'buzzer_ramp'
   - #'buzzer_roll'
   - #'buzzer_frontrangefinder'
@@ -16,7 +16,8 @@ modules:
   - #'buzzer_changealtitude'
   - #'siderangefinders_changealtitude'
   - #'buzzer_inactivity'
-  - 'buzzer_quiet_toprangefinder'
+  - #'buzzer_quiet_toprangefinder'
+  - 'buzzer_spin'
 
 buzzer_movelaterally:
   - 4000 # sound frequency
@@ -89,6 +90,12 @@ buzzer_homing:
   - 2000  # high frequency, hz
   - 0  # low distance, meters
   - 3  # high distance, meters
+
+buzzer_spin:
+  - 0  # low frequency, hz
+  - 2000  # high frequency, hz
+  - 10  # low spin rate, deg/s
+  - 2000  # high spin rate, deg/s
 
 buzzer_quiet_toprangefinder:
   - 100 # turn off buzzer threshold, mm

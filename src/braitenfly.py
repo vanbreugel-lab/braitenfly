@@ -77,7 +77,7 @@ class Braiten_Fly(object):
         if self.buzzer:
             print('Playing sound...', end='')
             # self.cfclient.play_buzzer(number=11, frequency=500, duration=3.0, stop=True)
-            command = ('play_buzzer', [11, 500, 3.0, True])
+            command = ('play_buzzer', [11, 500, 1.0, True])
             self.execute_command(command)
             print('done.')
 
@@ -771,6 +771,45 @@ class Braiten_Fly(object):
             command = [[time.time(), 'play_buzzer', [12, frequency, 0, 0]]]
             print(np.round(distance, 3), frequency)
 
+            return 1, command
+        else:
+            return None, None
+
+    def module_buzzer_spin(self, module_name):
+        """
+        Module: modulate buzzer frequency based on magnitude of angular velocity vector.
+
+        ending action
+
+        :return: None x3
+        """
+
+        parameters = self.config[module_name]
+
+        low_frequency, high_frequency, low_spin, high_spin = parameters
+
+        # Get current angular velocities
+        roll_rate = self.sensor_history['Gyro']['x'].values[-1]
+        pitch_rate = self.sensor_history['Gyro']['y'].values[-1]
+        yaw_rate = self.sensor_history['Gyro']['z'].values[-1]
+
+        # Total rate
+        spin = np.sqrt(roll_rate**2 + pitch_rate**2 + yaw_rate**2)
+
+        # Map to frequency
+        frequency = int(map_range(spin, low_spin, high_spin, low_frequency, high_frequency))
+
+        if frequency < low_frequency:
+            frequency = low_frequency
+
+        if frequency > high_frequency:
+            frequency = high_frequency
+
+        self.buzzer_stack = []
+        if self.buzzer:
+            # return None, None
+            # print(spin, frequency)
+            command = [[time.time(), 'play_buzzer', [12, frequency, 0, 0]]]
             return 1, command
         else:
             return None, None
