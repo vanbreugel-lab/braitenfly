@@ -1,4 +1,4 @@
-# Virtual machine startup Guide
+# Virtual machine startup guide
 Follow this guide to start the CrazyFly virtual machine.
 
 1. Open Vmware Workstation Player either by clicking the desktop icon or by searching `Vmware` using the Windows search function. ![vmware_icon.png](img/vmware_icon.png)
