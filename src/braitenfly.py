@@ -970,6 +970,31 @@ class Braiten_Fly(object):
         else:
             return None, None
 
+    def module_vader(self, module_name):
+        """
+
+        Darth vader.
+
+        :return:
+        priority    : (int) 1 or 0 indicating high or low priority, respectively
+        action      : None
+        commands    : (list) of four signed command actions
+
+        """
+
+        ranges = ['front', 'left', 'back', 'right']
+        front, left, back, right = self.sensor_history['Range'][ranges].values[-1]
+
+        threshold = 100
+
+        if self.buzzer and not self.takeoff:
+            if (front < threshold) and (back < threshold) and (right < threshold) and (left < threshold):
+                print('I am your father.')
+                self.cfclient.play_buzzer(number=10, frequency=0, duration=10.0, stop=True)
+
+        return None, None
+
+
 
 def map_range(x, old_min, old_max, new_min, new_max):
     return (x - old_min) / (old_max - old_min) * (new_max - new_min) + new_min

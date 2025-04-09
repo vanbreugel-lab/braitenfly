@@ -19,6 +19,7 @@ modules:
   - #'homesick'
   - #'push_pull'
   - 'buzzer_quiet_toprangefinder'
+  - vader
 
 
 buzzer_spin:
