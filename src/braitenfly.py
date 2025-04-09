@@ -806,8 +806,6 @@ class Braiten_Fly(object):
 
         # self.buzzer_stack = []
         if self.buzzer:
-            # return None, None
-            # print(spin, frequency)
             command = [[time.time(), 'play_buzzer', [12, frequency, 0, 0]]]
             return 1, command
         else:
@@ -846,8 +844,6 @@ class Braiten_Fly(object):
 
         # self.buzzer_stack = []
         if self.buzzer:
-            # return None, None
-            print(a, frequency)
             command = [[time.time(), 'play_buzzer', [12, frequency, 0, 0]]]
             return 1, command
         else:
