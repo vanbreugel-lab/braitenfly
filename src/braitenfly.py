@@ -323,7 +323,7 @@ class Braiten_Fly(object):
         # self.buzzer_stack = []
         if self.buzzer and (self.sensor_history['Range']['up'].values[-1] < threshold):
             print('QUIET!!!!')
-            return 0, [ [0, 'play_buzzer', [0, 2000, 1.0, True]] ]
+            return 0, [ [0, 'play_buzzer', [0, 0, 1.0, True]] ]
         else:
             return None, None
 
@@ -842,7 +842,7 @@ class Braiten_Fly(object):
         turnangle = int(command_turnangle)
 
         if turnangle > 0:
-            return 0, ['turn_left', int(np.abs(turnangle))]
+            return 1, ['turn_left', int(np.abs(turnangle))]
         elif turnangle < 0:
             return 1, ['turn_right', int(np.abs(turnangle))]
         else:

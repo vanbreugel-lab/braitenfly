@@ -9,12 +9,12 @@ modules:
   - #'buzzer_changealtitude'
   - #'buzzer_inactivity'
   - 'land_toprangefinder'
-  - #'retreat_allrangefinders'
+  - 'retreat_allrangefinders'
   - #'orient_rangefinders'
   - #'approach_frontrangefinder'
   - #'retreat_toprangefinder'
   - #'siderangefinders_changealtitude'
-  - 'ballerina'
+  - #'ballerina'
   - 'buzzer_quiet_toprangefinder'
 
 
@@ -23,7 +23,7 @@ buzzer_spin:
   - 2000  # high frequency, hz
   - 10  # low spin rate, deg/s
   - 2000  # high spin rate, deg/s
-  -
+
 buzzer_homing:
   - 5  # low frequency, hz
   - 2000  # high frequency, hz
