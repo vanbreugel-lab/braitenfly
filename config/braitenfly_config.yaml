@@ -16,6 +16,7 @@ modules:
   - #'siderangefinders_changealtitude'
   - #'ballerina'
   - #'homesick'
+  - 'push_pull'
   - 'buzzer_quiet_toprangefinder'
 
 
@@ -94,7 +95,9 @@ ballerina:
 homesick:
   - 10  # turn angle, deg
 
+push_pull:
+  - 500  # detection distance, mm
+  - 0.1 # move distance, m
+
 buzzer_quiet_toprangefinder:
   - 40 # turn off buzzer threshold, mm
-
-

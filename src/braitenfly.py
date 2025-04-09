@@ -879,15 +879,60 @@ class Braiten_Fly(object):
             turn = 0
 
         if turn > 0:
-            dir = 'turn_left'
+            direction = 'turn_left'
         else:
-            dir = 'turn_right'
+            direction = 'turn_right'
 
-        print(error, turn)
+        return 1, [direction, turn]
 
 
-        return 1, [dir, turn]
+    def module_push_pull(self, module_name):
+        """
 
+        Randomly choose to approach or retreat from any range finder that detects object.
+
+        :return:
+        priority    : (int) 1 or 0 indicating high or low priority, respectively
+        action      : None
+        commands    : (list) of four signed command actions
+        """
+
+        parameters = self.config[module_name]
+        detect_threshold, move_distance = parameters
+
+        ranges = ['front', 'left', 'back', 'right']
+        front, left, back, right = self.sensor_history['Range'][ranges].values[-1]
+
+        push_pull = np.random.choice([-1, 1])
+
+        if front < detect_threshold:
+            if push_pull == 1:
+                direction = 'forward'
+            else:
+                direction = 'back'
+        elif back < detect_threshold:
+            if push_pull == 1:
+                direction = 'back'
+            else:
+                direction = 'forward'
+        elif right < detect_threshold:
+            if push_pull == 1:
+                direction = 'right'
+            else:
+                direction = 'left'
+        elif left < detect_threshold:
+            if push_pull == 1:
+                direction = 'left'
+            else:
+                direction = 'right'
+        else:
+            direction = None
+
+        if direction is not None:
+            print([direction, move_distance])
+            return 1, [direction, move_distance]
+        else:
+            return None, None
 
 
 def map_range(x, old_min, old_max, new_min, new_max):
