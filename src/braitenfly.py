@@ -584,9 +584,6 @@ class Braiten_Fly(object):
         else:
             return None, None
 
-
-
-
     def module_siderangefinders_changealtitude(self, module_name):
         """
         If an object is on one side of range finder, move up by a specified amount. If an object is on other side of range finder, move down by another specified amount
@@ -817,6 +814,46 @@ class Braiten_Fly(object):
             return None, None
 
 
+    def module_buzzer_accelerate(self, module_name):
+        """
+        Module: modulate buzzer frequency based on magnitude of acceleration vector.
+
+        ending action
+
+        :return: None x3
+        """
+
+        parameters = self.config[module_name]
+
+        low_frequency, high_frequency, low_acceleration, high_acceleration = parameters
+
+        # Get current angular velocities
+        ax = self.sensor_history['Acceleration']['x'].values[-1]
+        ay = self.sensor_history['Acceleration']['y'].values[-1]
+        az = self.sensor_history['Acceleration']['z'].values[-1]
+
+        # Total rate
+        a = np.sqrt(ax**2 + ay**2 + az**2) - 1.0
+
+        # Map to frequency
+        frequency = int(map_range(a, low_acceleration, high_acceleration, low_frequency, high_frequency))
+
+        if frequency < low_frequency:
+            frequency = low_frequency
+
+        if frequency > high_frequency:
+            frequency = high_frequency
+
+        # self.buzzer_stack = []
+        if self.buzzer:
+            # return None, None
+            print(a, frequency)
+            command = [[time.time(), 'play_buzzer', [12, frequency, 0, 0]]]
+            return 1, command
+        else:
+            return None, None
+
+
     def module_ballerina(self, module_name):
         """
         Spin like a ballerina.
@@ -883,7 +920,10 @@ class Braiten_Fly(object):
         else:
             direction = 'turn_right'
 
-        return 1, [direction, turn]
+        if self.takeoff:
+            return 1, [direction, turn]
+        else:
+            return None, None
 
 
     def module_push_pull(self, module_name):
@@ -928,7 +968,7 @@ class Braiten_Fly(object):
         else:
             direction = None
 
-        if direction is not None:
+        if direction is not None and self.takeoff:
             print([direction, move_distance])
             return 1, [direction, move_distance]
         else:

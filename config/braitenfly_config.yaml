@@ -2,6 +2,7 @@
 modules:
   - #'buzzer_roll'
   - #'buzzer_spin'
+  - 'buzzer_accelerate'
   - #'buzzer_homing'
   - #'buzzer_ramp'
   - #'buzzer_frontrangefinder'
@@ -16,7 +17,7 @@ modules:
   - #'siderangefinders_changealtitude'
   - #'ballerina'
   - #'homesick'
-  - 'push_pull'
+  - #'push_pull'
   - 'buzzer_quiet_toprangefinder'
 
 
@@ -25,6 +26,12 @@ buzzer_spin:
   - 2000  # high frequency, hz
   - 10  # low spin rate, deg/s
   - 2000  # high spin rate, deg/s
+
+buzzer_accelerate:
+  - 0  # low frequency, hz
+  - 2000  # high frequency, hz
+  - 0.1  # low acceleration, m/s^2
+  - 3.0  # high acceleration, m/s^2
 
 buzzer_homing:
   - 5  # low frequency, hz
