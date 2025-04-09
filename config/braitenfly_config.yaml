@@ -15,6 +15,7 @@ modules:
   - #'retreat_toprangefinder'
   - #'siderangefinders_changealtitude'
   - #'ballerina'
+  - #'homesick'
   - 'buzzer_quiet_toprangefinder'
 
 
@@ -89,6 +90,9 @@ circleright_topfronttrangefinder_delayed:
 
 ballerina:
   -360  # turn angle, deg
+
+homesick:
+  - 10  # turn angle, deg
 
 buzzer_quiet_toprangefinder:
   - 40 # turn off buzzer threshold, mm

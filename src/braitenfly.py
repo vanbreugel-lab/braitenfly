@@ -848,6 +848,47 @@ class Braiten_Fly(object):
         else:
             return None, None
 
+    def module_homesick(self, module_name):
+        """
+        Module: always orient to home position.
+
+        :return:
+        commands    : (list) of four signed command actions
+        """
+
+        parameters = self.config[module_name]
+        turn_angle, = parameters
+
+        x0, y0, z0 = self.start_position
+
+        x, y, z = self.sensor_history['KalmanPositionEst'][['stateX', 'stateY', 'stateZ']].values[-1]
+
+        # Compute angle looking bck to home position
+        home_angle = np.arctan2(y-y0, x - x0)
+
+        # Current angle
+        yaw = self.sensor_history['Stabilizer']['yaw'].values[-1]
+
+        # Error
+        error = home_angle - yaw
+
+        # If close to home angle don't turn anymore, otherwise keep turning
+        if np.abs(error) > np.abs(1.5*turn_angle):
+            turn = turn_angle
+        else:
+            turn = 0
+
+        if turn > 0:
+            dir = 'turn_left'
+        else:
+            dir = 'turn_right'
+
+        print(error, turn)
+
+
+        return 1, [dir, turn]
+
+
 
 def map_range(x, old_min, old_max, new_min, new_max):
     return (x - old_min) / (old_max - old_min) * (new_max - new_min) + new_min
