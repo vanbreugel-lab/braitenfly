@@ -2,7 +2,6 @@
 
 # Command line arguments
 from optparse import OptionParser
-
 # ROS imports
 import roslib, rospy, actionlib
 import rospkg
@@ -102,6 +101,18 @@ class Braiten_Fly(object):
 
         ############################
 
+        # self.cfclient.connected.add_callback(connected_callback)
+        battery_variable = [LogVariable('pm.vbat', 'float')]
+        global battery_voltage
+        battery_voltage = 10
+        def battery_callback(data, timestamp):
+            global battery_voltage
+            battery_voltage = data['pm.vbat']
+
+        if "battery_low" in self.config['modules']:
+            self.cfclient.add_log_config('Battery', battery_variable, 100, callback=battery_callback)
+
+
         self.sensor_history = {topic_name: None for topic_name in self.sensor_topics}
         self.module_history = []
         self.module_history_timestamps = []
@@ -196,6 +207,8 @@ class Braiten_Fly(object):
             print('Not taking off!!')
 
         self.start_position = self.sensor_history['KalmanPositionEst'][['stateX', 'stateY', 'stateZ']].values[-1]
+        global battery_voltage
+        print(battery_voltage)
 
         while not rospy.is_shutdown():
             self.timenow = rospy.get_time()
@@ -982,15 +995,19 @@ class Braiten_Fly(object):
 
         """
 
-        ranges = ['front', 'left', 'back', 'right']
-        front, left, back, right = self.sensor_history['Range'][ranges].values[-1]
+        ranges = ['front', 'left', 'back', 'right', 'up']
+        front, left, back, right, up = self.sensor_history['Range'][ranges].values[-1]
 
-        threshold = 100
+        threshold = 40
 
         if self.buzzer and not self.takeoff:
-            if (front < threshold) and (back < threshold) and (right < threshold) and (left < threshold):
+            if (front < threshold) and (back < threshold) and (right < threshold) and (left < threshold) and (left < threshold):
                 print('I am your father.')
-                self.cfclient.play_buzzer(number=10, frequency=0, duration=10.0, stop=True)
+                rospack = rospkg.RosPack()
+                package_path = rospack.get_path('braitenfly')
+                img_path = os.path.join(package_path, 'img', 'vader.jpeg')
+                os.system('eog ' + img_path + ' &')
+                self.cfclient.play_buzzer(number=10, frequency=0, duration=5.7, stop=True)
 
         return None, None
 
