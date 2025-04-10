@@ -29,7 +29,8 @@ modules:
   - #'buzzer_manyinteractions'
   - #'play_safe'
   - #'battery_low'
-
+  - #'heat_buzzer'
+  - #'buzzer_beats'
 
 buzzer_spin:
   - 0  # low frequency, hz
@@ -118,3 +119,43 @@ push_pull:
 
 buzzer_quiet_toprangefinder:
   - 40 # turn off buzzer threshold, mm
+
+joltup_allrangefinders:
+  - 200 # distance threshold, mm
+  - 0.05 # jolt distance, m
+  - 0.5 # jolt velocity, m/s
+  - 2   # number of range finders involved
+
+joltup_adjacentrangefinders:
+  - 200 # distance threshold, mm
+  - 0.05 # jolt distance, m
+  - 0.5 # jolt velocity, m/s
+
+joltdown_opposingrangefinders:
+  - 200 # distance threshold, mm
+  - 0.05 # jolt distance, m
+  - 0.5 # jolt velocity, m/s
+
+too_high_bottomrangefinder:
+  - 1500 # distance threshold, mm
+  - 0.2 # retreat to this height, m
+
+track_movement:
+  - 200 # distance threshold, mm
+
+impatient:
+  - 5 # hover time, s
+  - .5 # rotation weight, max 1
+  - 0.5 # translation weight, max 1
+  - 0.9 # buzzer weight, not working now.
+
+buzzer_manyinteractions:
+  - retreat_allrangefinders   # trigger module
+  - 3 # trigger threshold
+  - 10 # trigger time
+
+play_safe:
+  - 0.5 # safe distance, m
+
+battery_low:
+  - 3 # battery threshold, V

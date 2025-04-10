@@ -1179,6 +1179,118 @@ class Braiten_Fly(object):
                 # print('but recently played')
         return None, None
 
+    def module_heat_buzzer(self, module_name):
+        self.sensor_timers = getattr(self, 'sensor_timers', {'both': None})
+        self.last_buzzer_toggle_time = getattr(self, 'last_buzzer_toggle_time', rospy.get_time())
+        self.buzzer_state = getattr(self, 'buzzer_state', "off")
+        self.total_inputs = getattr(self, 'total_inputs', 0)
+        self.final_beep_produced = getattr(self, 'final_beep_produced', False)
+
+        current_time = rospy.get_time()
+        sensor_threshold = 150
+        off_interval = 0.075
+
+        left_sensor = self.sensor_history['Range']['left'].values[-1]
+        right_sensor = self.sensor_history['Range']['right'].values[-1]
+
+        if left_sensor < sensor_threshold and right_sensor < sensor_threshold:
+            if self.sensor_timers['both'] is None:
+                self.sensor_timers['both'] = current_time
+                return None, None
+
+            if self.final_beep_produced:
+                return None, None
+
+            beep_duration = 1.0 - (self.total_inputs * 0.05)
+            if beep_duration < 0.1:
+                beep_duration = 0.1
+
+            if beep_duration == 0.1 and self.total_inputs == 25:
+                absolute_beep_duration = 4.0
+                absolute_beep_pitch = 3000
+                beep_on = [current_time, 'play_buzzer', [10, absolute_beep_pitch, absolute_beep_duration, 0]]
+                beep_off = [current_time + absolute_beep_duration, 'play_buzzer', [0, 500, 0, 0]]
+                self.final_beep_produced = True
+                return -1, [beep_on, beep_off]
+
+            beep_pitch = 300 + (self.total_inputs * 100)
+            if beep_pitch > 2800:
+                beep_pitch = 2800
+
+            if self.buzzer_state == "on":
+                if current_time - self.last_buzzer_toggle_time >= beep_duration:
+                    self.buzzer_state = "off"
+                    self.last_buzzer_toggle_time = current_time
+                    self.total_inputs += 1
+                    beep_off = [current_time, 'play_buzzer', [0, 500, 0, 0]]
+                    return -1, [beep_off]
+                else:
+                    return None, None
+            else:
+                if current_time - self.last_buzzer_toggle_time >= off_interval:
+                    self.buzzer_state = "on"
+                    self.last_buzzer_toggle_time = current_time
+                    beep_on = [current_time, 'play_buzzer', [12, int(beep_pitch), beep_duration, 0]]
+                    return -1, [beep_on]
+                else:
+                    return None, None
+        else:
+            self.sensor_timers['both'] = None
+            self.total_inputs = 0
+            self.final_beep_produced = False
+            if self.buzzer_state != "off":
+                self.buzzer_state = "off"
+                off_cmd = [current_time, 'play_buzzer', [0, 500, 0, 0]]
+                self.last_buzzer_toggle_time = current_time
+                return -1, [off_cmd]
+            self.last_buzzer_toggle_time = current_time
+            return None, None
+
+    def module_buzzer_beats(self, module_name):
+        self.sensor_timers = getattr(self, 'sensor_timers', {'both': None})
+        self.last_buzzer_toggle_time = getattr(self, 'last_buzzer_toggle_time', rospy.get_time())
+        self.buzzer_state = getattr(self, 'buzzer_state', "off")
+        current_time = rospy.get_time()
+        front_sensor = self.sensor_history['Range']['front'].values[-1]
+        back_sensor = self.sensor_history['Range']['back'].values[-1]
+
+        if front_sensor < 10 or front_sensor > 200 or back_sensor < 10 or back_sensor > 200:
+            if self.buzzer_state == "on":
+                beep_off = [current_time, 'play_buzzer', [0, 500, 0, 0]]
+                self.buzzer_state = "off"
+                self.sensor_timers['both'] = None
+                self.last_buzzer_toggle_time = current_time
+                return -1, [beep_off]
+            else:
+                self.sensor_timers['both'] = None
+                self.last_buzzer_toggle_time = current_time
+                return None, None
+
+        if self.sensor_timers['both'] is None:
+            self.sensor_timers['both'] = current_time
+            return None, None
+
+        duration = 0.075 + ((front_sensor - 10) / (200 - 10)) * (2.0 - 0.075)
+        pitch = 2800 - ((back_sensor - 10) / (200 - 10)) * (2800 - 10)
+        off_interval = 0.09
+
+        if self.buzzer_state == "on":
+            if current_time - self.last_buzzer_toggle_time >= duration:
+                self.buzzer_state = "off"
+                self.last_buzzer_toggle_time = current_time
+                beep_off = [current_time, 'play_buzzer', [0, 500, 0, 0]]
+                return -1, [beep_off]
+            else:
+                return None, None
+        else:
+            if current_time - self.last_buzzer_toggle_time >= off_interval:
+                self.buzzer_state = "on"
+                self.last_buzzer_toggle_time = current_time
+                beep_on = [current_time, 'play_buzzer', [12, int(pitch), duration, 0]]
+                return -1, [beep_on]
+            else:
+                return None, None
+
 
 
 def map_range(x, old_min, old_max, new_min, new_max):
