@@ -2,7 +2,7 @@
 modules:
   - #'buzzer_roll'
   - #'buzzer_spin'
-  - 'buzzer_accelerate'
+  - #'buzzer_accelerate'
   - #'buzzer_homing'
   - #'buzzer_ramp'
   - #'buzzer_frontrangefinder'
@@ -18,8 +18,17 @@ modules:
   - #'ballerina'
   - #'homesick'
   - #'push_pull'
-  - 'buzzer_quiet_toprangefinder'
-  - vader
+  - #'buzzer_quiet_toprangefinder'
+  - #'vader'
+  - #'joltup_allrangefinders'
+  - #'joltup_adjacentrangefinders'
+  - #'joltdown_opposingrangefinders'
+  - #'too_high_bottomrangefinder'
+  - #'track_movement'
+  - #'impatient'
+  - #'buzzer_manyinteractions'
+  - #'play_safe'
+  - #'battery_low'
 
 
 buzzer_spin:
