@@ -1,35 +1,34 @@
 
 modules:
-  - #'buzzer_roll'
-  - #'buzzer_spin'
-  - #'buzzer_accelerate'
-  - #'buzzer_homing'
-  - #'buzzer_ramp'
-  - #'buzzer_frontrangefinder'
-  - #'buzzer_movelaterally'
-  - #'buzzer_changealtitude'
-  - #'buzzer_inactivity'
+  # - 'buzzer_roll'
+  # - 'buzzer_spin'
+  # - 'buzzer_accelerate'
+  # - 'buzzer_homing'
+  # - 'buzzer_ramp'
+  # - 'buzzer_frontrangefinder'
+  # - 'buzzer_movelaterally'
+  # - 'buzzer_changealtitude'
+  # - 'buzzer_inactivity'
   - 'land_toprangefinder'
   - 'retreat_allrangefinders'
-  - 'orient_rangefinders'
-  - #'approach_frontrangefinder'
-  - #'retreat_toprangefinder'
-  - #'siderangefinders_changealtitude'
-  - #'ballerina'
-  - #'homesick'
-  - #'push_pull'
-  - #'buzzer_quiet_toprangefinder'
-  - 'vader'
-  - #'joltup_allrangefinders'
-#  - 'joltup_adjacentrangefinders'
-#  - 'joltdown_opposingrangefinders'
-#  - 'too_high_bottomrangefinder'
-  - #'track_movement'
-  - #'impatient'
-  - #'buzzer_manyinteractions'
-  - #'battery_low'
-  - #'heat_buzzer'
-  - #'buzzer_beats'
+  # - 'orient_rangefinders'
+  # - 'approach_frontrangefinder'
+  # - 'retreat_toprangefinder'
+  # - 'siderangefinders_changealtitude'
+  # - 'ballerina'
+  # - 'homesick'
+  # - 'push_pull'
+  # - 'buzzer_quiet_toprangefinder'
+  # - 'vader'
+  # - 'jumpy_allrangefinders'
+  # - 'jumpy_adjacentrangefinders'
+  # - 'dive_opposingrangefinders'
+  # - 'too_high_bottomrangefinder'
+  # - 'impatient'
+  # - 'buzzer_manyinteractions'
+  - 'power_low'
+  # - 'heat_buzzer'
+  # - 'buzzer_beats'
 
 buzzer_spin:
   - 0  # low frequency, hz
@@ -93,7 +92,7 @@ approach_frontrangefinder:
   - 0.2 # approach distance, m
 
 retreat_allrangefinders:
-  - 100 # distance threshold, mm
+  - 300 # distance threshold, mm
   - 0.2 # retreat distance, m
 
 orient_rangefinders:
@@ -119,18 +118,18 @@ push_pull:
 buzzer_quiet_toprangefinder:
   - 40 # turn off buzzer threshold, mm
 
-joltup_allrangefinders:
+jumpy_allrangefinders:
   - 200 # distance threshold, mm
   - 0.05 # jolt distance, m
   - 0.5 # jolt velocity, m/s
   - 2   # number of range finders involved
 
-joltup_adjacentrangefinders:
+jumpy_adjacentrangefinders:
   - 200 # distance threshold, mm
   - 0.05 # jolt distance, m
   - 0.5 # jolt velocity, m/s
 
-joltdown_opposingrangefinders:
+dive_opposingrangefinders:
   - 200 # distance threshold, mm
   - 0.05 # jolt distance, m
   - 0.5 # jolt velocity, m/s
@@ -139,22 +138,17 @@ too_high_bottomrangefinder:
   - 1500 # distance threshold, mm
   - 0.2 # retreat to this height, m
 
-track_movement:
-  - 200 # distance threshold, mm
 
 impatient:
-  - 5 # hover time, s
+  - 7 # hover time, s
   - .5 # rotation weight, max 1
-  - 0.5 # translation weight, max 1
-  - 0.9 # buzzer weight, not working now.
+  - .5 # translation weight, max 1
 
-buzzer_manyinteractions:
-  - retreat_allrangefinders   # trigger module
-  - 3 # trigger threshold
-  - 10 # trigger time
+# buzzer_manyinteractions:
+#   - retreat_allrangefinders   # trigger module
+#   - 2 # trigger threshold
+#   - 5 # trigger time
 
-play_safe:
-  - 0.5 # safe distance, m
 
-battery_low:
-  - 3 # battery threshold, V
+power_low:
+  - 3 # battery threshold, Volts

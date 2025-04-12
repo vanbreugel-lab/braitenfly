@@ -97,20 +97,21 @@ class Braiten_Fly(object):
                                 'Gyro', # (float) gyro.x, gyro.y, gyro.z
                                 'StateEst', # (float) stateEstimate.ax, stateEstimate.ay, stateEstimate.az, stateEstimate.vx, stateEstimate.vy, stateEstimate.vz
                                 'Range', # (unit16_t) range.back, range.front, range.left, range.right, range.up, range.zrange
+                                'BatteryState', # (float) battery.voltage
                                 ]
 
         ############################
 
-        # self.cfclient.connected.add_callback(connected_callback)
-        battery_variable = [LogVariable('pm.vbat', 'float')]
-        global battery_voltage
-        battery_voltage = 10
-        def battery_callback(data, timestamp):
-            global battery_voltage
-            battery_voltage = data['pm.vbat']
+        # # self.cfclient.connected.add_callback(connected_callback)
+        # battery_variable = [LogVariable('pm.vbat', 'float')]
+        # global battery_voltage
+        # battery_voltage = 10
+        # def battery_callback(data, timestamp):
+        #     global battery_voltage
+        #     battery_voltage = data['pm.vbat']
 
-        if "battery_low" in self.config['modules']:
-            self.cfclient.add_log_config('Battery', battery_variable, 100, callback=battery_callback)
+        # if "battery_low" in self.config['modules']:
+        #     self.cfclient.add_log_config('Battery', battery_variable, 100, callback=battery_callback)
 
 
         self.sensor_history = {topic_name: None for topic_name in self.sensor_topics}
@@ -205,10 +206,11 @@ class Braiten_Fly(object):
 
         else:
             print('Not taking off!!')
+            
+        current_battery_voltage = self.sensor_history['BatteryState']['vbat'].values[-1]
+        print(f"battery: {current_battery_voltage.round(2)} V")
 
         self.start_position = self.sensor_history['KalmanPositionEst'][['stateX', 'stateY', 'stateZ']].values[-1]
-        global battery_voltage
-        print(battery_voltage)
 
         while not rospy.is_shutdown():
             self.timenow = rospy.get_time()
@@ -1011,7 +1013,7 @@ class Braiten_Fly(object):
 
         return None, None
 
-    def module_joltup_allrangefinders(self, module_name):
+    def module_jumpy_allrangefinders(self, module_name):
         """if there is an object within the threshold distance from n rangefinders, jolt up.
         high priority, open loop command
         Args:
@@ -1020,15 +1022,12 @@ class Braiten_Fly(object):
         parameters = self.config[module_name]
         distance_threshold, jolt_distance, velocity, n = parameters
         range_now = self.sensor_history['Range'][['front', 'back', 'left', 'right']].values[-1]
-        # print(range_now)
         if np.sum(range_now < distance_threshold) >= n:
-            print('jolt up')
-            # command = ['up', jolt_distance]
             command = ['up', [jolt_distance, velocity]]
             return 0, [command]
         return None, None
 
-    def module_joltup_adjacentrangefinders(self, module_name):
+    def module_jumpy_adjacentrangefinders(self, module_name):
         """if there is an object within the threshold distance from adjacent rangefinders, jolt up.
         high priority, open loop command
         Args:
@@ -1043,12 +1042,11 @@ class Braiten_Fly(object):
         check4 = range_now[2] < distance_threshold and range_now[3] < distance_threshold
         if any([check1, check2, check3, check4]):
             print('jolt up')
-            # command = ['up', jolt_distance]
             command = ['up', [jolt_distance, velocity]]
             return 0, [command]
         return None, None
 
-    def module_joltdown_opposingrangefinders(self, module_name):
+    def module_dive_opposingrangefinders(self, module_name):
         """if there is an object within the threshold distance from opposing rangefinders, jolt down.
         high priority, open loop command
         Args:
@@ -1061,7 +1059,6 @@ class Braiten_Fly(object):
         check2 = range_now[1] < distance_threshold and range_now[3] < distance_threshold
         if any([check1, check2]):
             print('jolt down')
-            # command = ['down', jolt_distance]
             command = ['down', [jolt_distance, velocity]]
             return 0, [command]
         return None, None
@@ -1075,7 +1072,6 @@ class Braiten_Fly(object):
         parameters = self.config[module_name]
         distance_threshold, retreat_distance = parameters
         range_now = self.sensor_history['Range'][['zrange']].values[-1]
-        # print(range_now)
         if range_now > distance_threshold:
             print('too high')
             previous_down_commands = [x for x in self.action_stack if x[0] == 'down']
@@ -1086,115 +1082,66 @@ class Braiten_Fly(object):
             return 5, [command]
         return None, None
 
-    def module_track_movement(self, module_name):
-        """if there is movement detected, orient the drone to face the movement.
-        """
-        parameters = self.config[module_name]
-
-        history_length = 2
-        threshold = 1000
-        sensory_radius = 3000
-        deg = 10
-        range_history = self.sensor_history['Range'][['front', 'left', 'back', 'right', 'front']].values[
-                        -history_length:]
-        range_history = np.where(range_history > sensory_radius, sensory_radius, range_history)
-        diff = np.diff(range_history, axis=0)
-        summed_diff = np.sum(np.abs(diff), axis=0)
-        z_height = self.sensor_history['Range'][['zrange']].values[-1]
-        # print(f"f: {summed_diff[0]:.2f}, l: {summed_diff[1]:.2f}, b: {summed_diff[2]:.2f}, r: {summed_diff[3]:.2f}")
-        if np.any(summed_diff > threshold) and z_height > 500:
-            orientation = np.argmax(np.sum(np.abs(diff), axis=0))
-            if orientation == 0:  # front
-                print('front')
-                command = ['forward', 0]
-            elif orientation == 1:  # left
-                command = ['turn_left', deg]
-                print('turn left')
-            elif orientation == 2:  # back
-                command = ['turn_left', deg]
-                print('back')
-            elif orientation == 3:  # right
-                command = ['turn_right', deg]
-                print('turn right')
-            else:
-                command = ['forward', 0]
-            return 0, [command]
-
-        return None, None
-
     def module_impatient(self, module_name):
         """if the drone is hovering for a while, move it around a bit.
         """
         parameters = self.config[module_name]
-        time_threshold, w1, w2, w3 = parameters
+        time_threshold, w1, w2 = parameters
         time_now = time.time()
         if len(self.module_history_timestamps) > 0:
             timestamps = np.array(self.module_history_timestamps)
             if time_now - np.max(timestamps) > time_threshold:
-                print('fidgety')
                 command = []
                 rotation_command = ['turn_left', np.random.randint(0, 360)] if np.random.choice([True, False],
                                                                                                 p=[w1, 1 - w1]) else []
-                forward_command = ['forward', np.random.uniform(0.1, 0.5)] if np.random.choice([True, False],
+                forward_command = ['forward', np.random.uniform(-0.5, 0.5)] if np.random.choice([True, False],
                                                                                                p=[w2, 1 - w2]) else []
-                # buzzer_command = [ [time.time(), 'play_buzzer', [12, 2000, 0, 0]],
-                #         [time.time()+0.05, 'play_buzzer', [12, 3000, 0, 0]],
-                #         [time.time()+0.1, 'play_buzzer', [12, 4000, 0, 0]],
-                #         [time.time()+0.15, 'play_buzzer', [12, 5000, 0, 0]],
-                #         [time.time()+0.2, 'play_buzzer', [12, 6000, 0, 0]],
-                #         [time.time()+0.25, 'play_buzzer', [12, 7000, 0, 0]],
-                #         [time.time()+0.3, 'play_buzzer', [12, 8000, 0, 0]],
-                #         [time.time()+0.35, 'play_buzzer', [0, 500, 0, 0]]]
-                # buzzer_command = buzzer_command if np.random.choice([True, False], p=[w3, 1-w3]) else []
                 command = [rotation_command, forward_command]
                 command = [c for c in command if len(c) > 0]
                 if len(command) > 0:
-                    return 10, command
+                    return 1, command
         else:
-            # there is no history.... this module requires an interaction to be triggered
-            pass
+            # there is no history, add one.
+            return 1, [['turn_left', 0.001]]
         return None, None
+    
+    # def module_buzzer
 
-    def module_battery_low(self, module_name):
+    
+
+    def module_power_low(self, module_name):
         """if the battery is low, land and shutdown.
         """
         parameters = self.config[module_name]
         low_battery_threshold = parameters[0]
-        global battery_voltage
-        # print('battery voltage: ', battery_voltage)
-        if battery_voltage < low_battery_threshold:
-            print('battery low, current voltage: ', battery_voltage)
+        current_battery_voltage = self.sensor_history['BatteryState']["vbat"].values[-1]
+        if current_battery_voltage < low_battery_threshold:
+            print('power low, v=', current_battery_voltage,'shutting down !!!!')
             self.land_and_shutdown()
         return None, None
 
-    def module_buzzer_manyinteractions(self, module_name):
-        """if there are many recent interactions, play a happy song.
-        """
-        trigger_module, trigger_n, trigger_t = self.config[module_name]
-        time_now = time.time()
-        if len(self.module_history_timestamps) > 0:
-            matching_inds = np.where(np.array(self.module_history) == trigger_module)[0]
-            interaction_times = np.array(self.module_history_timestamps)[matching_inds]
-            interaction_times = time_now - np.array(interaction_times)
-            if np.sum(interaction_times < trigger_t) > trigger_n:
-                # print('found many interactions')
-                # now check if the module has been played recently
-                inds = [i for i, x in enumerate(self.module_history) if x == module_name]
-                times = [self.module_history_timestamps[i] for i in inds]
-                times = time_now - np.array(times)
-                if np.sum(times < trigger_t) < 2:
-                    print('play happy song')
-                    return 1, [[0, 'play_buzzer', [12, 2000, 0, 0]],
-                               [time.time() + 0.05, 'play_buzzer', [12, 3000, 0, 0]],
-                               [time.time() + 0.1, 'play_buzzer', [12, 4000, 0, 0]],
-                               [time.time() + 0.15, 'play_buzzer', [12, 5000, 0, 0]],
-                               [time.time() + 0.2, 'play_buzzer', [12, 6000, 0, 0]],
-                               [time.time() + 0.25, 'play_buzzer', [12, 7000, 0, 0]],
-                               [time.time() + 0.3, 'play_buzzer', [12, 8000, 0, 0]],
-                               [time.time() + 0.35, 'play_buzzer', [0, 500, 0, 0]]
-                               ]
-                # print('but recently played')
-        return None, None
+    # def module_buzzer_manyinteractions(self, module_name):
+    #     """if there are many recent interactions, play a happy song.
+    #     """
+    #     trigger_module, trigger_n, trigger_t = self.config[module_name]
+    #     time_now = time.time()
+    #     if len(self.module_history_timestamps) > 0:
+    #         matching_inds = np.where(np.array(self.module_history) == trigger_module)[0]
+    #         interaction_times = np.array(self.module_history_timestamps)[matching_inds]
+    #         interaction_times = time_now - np.array(interaction_times)
+    #         if np.sum(interaction_times < trigger_t) > trigger_n:
+    #             # print('found many interactions')
+    #             # now check if the module has been played recently
+    #             inds = [i for i, x in enumerate(self.buzzer_stack) if x == module_name]
+    #             print(self.module_history)
+    #             times = [self.module_history_timestamps[i] for i in inds]
+    #             times = time_now - np.array(times)
+    #             print('times', times)
+    #             if len(times)==0 and np.sum(times < trigger_t) == 0:
+    #                 print('playing buzzer', time.time())
+    #                 return 1, [[0, 'play_buzzer', [2, 1000, 1, 1]]]
+    #             # print('but recently played')
+    #     return None, None
 
     def module_heat_buzzer(self, module_name):
         self.sensor_timers = getattr(self, 'sensor_timers', {'both': None})
