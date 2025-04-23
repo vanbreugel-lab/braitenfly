@@ -1,21 +1,58 @@
-# braid volume trigger configuration
-# Specifies which crazyflies to connect to, and what to name them in ROS
-
 
 modules:
-  - #'buzzer_homing'
-  - #'buzzer_ramp'
-  - 'buzzer_roll'
-  - #'buzzer_frontrangefinder'
+  # - 'buzzer_roll'
+  # - 'buzzer_spin'
+  # - 'buzzer_accelerate'
+  # - 'buzzer_homing'
+  # - 'buzzer_ramp'
+  # - 'buzzer_frontrangefinder'
+  # - 'buzzer_movelaterally'
+  # - 'buzzer_changealtitude'
+  # - 'buzzer_inactivity'
   - 'land_toprangefinder'
   - 'retreat_allrangefinders'
-  - 'orient_rangefinders'
-  - #'approach_frontrangefinder'
-  - #'retreat_toprangefinder'
-  - #'buzzer_movelaterally'
-  - #'buzzer_changealtitude'
-  - #'siderangefinders_changealtitude'
-  - #'buzzer_inactivity'
+  # - 'orient_rangefinders'
+  # - 'approach_frontrangefinder'
+  # - 'retreat_toprangefinder'
+  # - 'siderangefinders_changealtitude'
+  # - 'ballerina'
+  # - 'homesick'
+  # - 'push_pull'
+  # - 'buzzer_quiet_toprangefinder'
+  # - 'vader'
+  # - 'jumpy_allrangefinders'
+  # - 'jumpy_adjacentrangefinders'
+  # - 'dive_opposingrangefinders'
+  # - 'too_high_bottomrangefinder'
+  # - 'impatient'
+  # - 'buzzer_manyinteractions'
+  - 'power_low'
+  # - 'heat_buzzer'
+  # - 'buzzer_beats'
+
+buzzer_spin:
+  - 0  # low frequency, hz
+  - 2000  # high frequency, hz
+  - 10  # low spin rate, deg/s
+  - 2000  # high spin rate, deg/s
+
+buzzer_accelerate:
+  - 0  # low frequency, hz
+  - 2000  # high frequency, hz
+  - 0.1  # low acceleration, m/s^2
+  - 3.0  # high acceleration, m/s^2
+
+buzzer_homing:
+  - 5  # low frequency, hz
+  - 2000  # high frequency, hz
+  - 0  # low distance, meters
+  - 3  # high distance, meters
+
+buzzer_ramp:
+  - 800  # minimum left + right range sum to trigger
+
+buzzer_frontrangefinder:
+  - 200 # distance threshold, mm
 
 buzzer_movelaterally:
   - 4000 # sound frequency
@@ -26,7 +63,6 @@ buzzer_changealtitude:
   - 5000 # sound frequency
   - 0.5 # duration of sound
   - "up" # direction: choose between "up", "down"
-  
 
 buzzer_inactivity:
   - 10     # inactivity_threshold - X seconds of inactivity before the buzzer sounds
@@ -39,14 +75,6 @@ siderangefinders_changealtitude:
   - 0.1 # upward distance to move, m
   - 3 # which sensor controls downward motion: can be front: 0, left: 1, back: 2, right: 3 
   - 0.2 # downward distance to move, m
-  
-  
-buzzer_frontrangefinder:
-  - 200 # distance threshold, mm
-#  - 12 # sound
-#  - 500 # frequency
-#  - 0.01 # duration
-#  - 1 # stop
 
 land_bottomrangefinder:
   - 200 # land threshold, mm
@@ -64,7 +92,7 @@ approach_frontrangefinder:
   - 0.2 # approach distance, m
 
 retreat_allrangefinders:
-  - 100 # distance threshold, mm
+  - 300 # distance threshold, mm
   - 0.2 # retreat distance, m
 
 orient_rangefinders:
@@ -77,13 +105,50 @@ circleright_topfronttrangefinder_delayed:
   - 500 # distance threshold for front rangefinder
   - 0.3 # circle radius, m
 
-buzzer_roll:
-  - 0
+ballerina:
+  -360  # turn angle, deg
 
-buzzer_ramp:
-  - 800  # minimum left + right range sum to trigger
+homesick:
+  - 10  # turn angle, deg
 
-buzzer_homing:
-  - 800  # minimum left + right range sum to trigger
+push_pull:
+  - 500  # detection distance, mm
+  - 0.1 # move distance, m
+
+buzzer_quiet_toprangefinder:
+  - 40 # turn off buzzer threshold, mm
+
+jumpy_allrangefinders:
+  - 200 # distance threshold, mm
+  - 0.05 # jolt distance, m
+  - 0.5 # jolt velocity, m/s
+  - 2   # number of range finders involved
+
+jumpy_adjacentrangefinders:
+  - 200 # distance threshold, mm
+  - 0.05 # jolt distance, m
+  - 0.5 # jolt velocity, m/s
+
+dive_opposingrangefinders:
+  - 200 # distance threshold, mm
+  - 0.05 # jolt distance, m
+  - 0.5 # jolt velocity, m/s
+
+too_high_bottomrangefinder:
+  - 1500 # distance threshold, mm
+  - 0.2 # retreat to this height, m
 
 
+impatient:
+  - 7 # hover time, s
+  - .5 # rotation weight, max 1
+  - .5 # translation weight, max 1
+
+# buzzer_manyinteractions:
+#   - retreat_allrangefinders   # trigger module
+#   - 2 # trigger threshold
+#   - 5 # trigger time
+
+
+power_low:
+  - 3 # battery threshold, Volts

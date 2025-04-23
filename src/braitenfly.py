@@ -2,7 +2,6 @@
 
 # Command line arguments
 from optparse import OptionParser
-
 # ROS imports
 import roslib, rospy, actionlib
 import rospkg
@@ -77,7 +76,7 @@ class Braiten_Fly(object):
         if self.buzzer:
             print('Playing sound...', end='')
             # self.cfclient.play_buzzer(number=11, frequency=500, duration=3.0, stop=True)
-            command = ('play_buzzer', [11, 500, 3.0, True])
+            command = ('play_buzzer', [11, 500, 2.0, True])
             self.execute_command(command)
             print('done.')
 
@@ -98,9 +97,22 @@ class Braiten_Fly(object):
                                 'Gyro', # (float) gyro.x, gyro.y, gyro.z
                                 'StateEst', # (float) stateEstimate.ax, stateEstimate.ay, stateEstimate.az, stateEstimate.vx, stateEstimate.vy, stateEstimate.vz
                                 'Range', # (unit16_t) range.back, range.front, range.left, range.right, range.up, range.zrange
+                                'BatteryState', # (float) battery.voltage
                                 ]
 
         ############################
+
+        # # self.cfclient.connected.add_callback(connected_callback)
+        # battery_variable = [LogVariable('pm.vbat', 'float')]
+        # global battery_voltage
+        # battery_voltage = 10
+        # def battery_callback(data, timestamp):
+        #     global battery_voltage
+        #     battery_voltage = data['pm.vbat']
+
+        # if "battery_low" in self.config['modules']:
+        #     self.cfclient.add_log_config('Battery', battery_variable, 100, callback=battery_callback)
+
 
         self.sensor_history = {topic_name: None for topic_name in self.sensor_topics}
         self.module_history = []
@@ -194,6 +206,9 @@ class Braiten_Fly(object):
 
         else:
             print('Not taking off!!')
+            
+        current_battery_voltage = self.sensor_history['BatteryState']['vbat'].values[-1]
+        print(f"battery: {current_battery_voltage.round(2)} V")
 
         self.start_position = self.sensor_history['KalmanPositionEst'][['stateX', 'stateY', 'stateZ']].values[-1]
 
@@ -302,9 +317,31 @@ class Braiten_Fly(object):
         land_threshold, = parameters
 
         if self.sensor_history['Range']['up'].values[-1] < land_threshold:
+            # Turn off buzzer first
+            # self.cfclient.play_buzzer(number=12, frequency=5000, duration=0.1, stop=False)
             return 0, [['land',None], ['shutdown',None]]
         else:
             return None, None
+        
+    def module_buzzer_quiet_toprangefinder(self, module_name):
+        """
+        If an object is above, land, turn off the buzzer.
+
+        ending action
+
+        :return: None x3
+        """
+
+        parameters = self.config[module_name]
+        threshold, = parameters
+
+        # self.buzzer_stack = []
+        if self.buzzer and (self.sensor_history['Range']['up'].values[-1] < threshold):
+            print('QUIET!!!!')
+            return 0, [ [0, 'play_buzzer', [0, 0, 1.0, True]] ]
+        else:
+            return None, None
+
 
     def module_land_bottomrangefinder(self, module_name):
         """
@@ -562,9 +599,6 @@ class Braiten_Fly(object):
         else:
             return None, None
 
-
-
-
     def module_siderangefinders_changealtitude(self, module_name):
         """
         If an object is on one side of range finder, move up by a specified amount. If an object is on other side of range finder, move down by another specified amount
@@ -685,7 +719,7 @@ class Braiten_Fly(object):
         commands    : (list) of four signed command actions
         """
 
-        parameters = self.config[module_name]
+        # parameters = self.config[module_name]
         self.buzzer_stack = []
         if self.buzzer and (not self.takeoff):
             return 0, [ [1, 'play_buzzer', [14, 2000, 0, 0]] ]
@@ -720,7 +754,7 @@ class Braiten_Fly(object):
 
     def module_buzzer_homing(self, module_name):
         """
-        Module buzzer ramp speed based on left vs right sensor distance, but only when not flying.
+        Module buzzer homing will play a sound at a frequency proportional to the distance from the starting position.
 
         :return:
         commands    : (list) of four signed command actions
@@ -728,29 +762,499 @@ class Braiten_Fly(object):
 
         parameters = self.config[module_name]
 
+        low_frequency, high_frequency, low_distance, high_distance = parameters
 
         x0, y0, z0 = self.start_position
 
         x, y, z = self.sensor_history['KalmanPositionEst'][['stateX', 'stateY', 'stateZ']].values[-1]
         distance = np.sqrt((x - x0)**2 + (y - y0)**2)
 
-        low_frequency = 20
-        high_frequency = 5000
-
-        low_distance = 0
-        high_distance = 2
-
         frequency = int(map_range(distance, low_distance, high_distance, low_frequency, high_frequency))
+
         if frequency > high_frequency:
             frequency = high_frequency
 
+            # Reset the initial position if at edge of range
+            self.start_position = x, y, z
+
+        if frequency < low_frequency:
+            frequency = low_frequency
+
         if self.buzzer:
-            command = [[time.time(), 'play_buzzer', [12, frequency, 0, 0]]]
             print(np.round(distance, 3), frequency)
+            # return None, None
+            command = [[time.time(), 'play_buzzer', [12, frequency, 0, 0]]]
 
             return 1, command
         else:
             return None, None
+
+    def module_buzzer_spin(self, module_name):
+        """
+        Module: modulate buzzer frequency based on magnitude of angular velocity vector.
+
+        ending action
+
+        :return: None x3
+        """
+
+        parameters = self.config[module_name]
+
+        low_frequency, high_frequency, low_spin, high_spin = parameters
+
+        # Get current angular velocities
+        roll_rate = self.sensor_history['Gyro']['x'].values[-1]
+        pitch_rate = self.sensor_history['Gyro']['y'].values[-1]
+        yaw_rate = self.sensor_history['Gyro']['z'].values[-1]
+
+        # Total rate
+        spin = np.sqrt(roll_rate**2 + pitch_rate**2 + yaw_rate**2)
+
+        # Map to frequency
+        frequency = int(map_range(spin, low_spin, high_spin, low_frequency, high_frequency))
+
+        if frequency < low_frequency:
+            frequency = low_frequency
+
+        if frequency > high_frequency:
+            frequency = high_frequency
+
+        # self.buzzer_stack = []
+        if self.buzzer:
+            command = [[time.time(), 'play_buzzer', [12, frequency, 0, 0]]]
+            return 1, command
+        else:
+            return None, None
+
+
+    def module_buzzer_accelerate(self, module_name):
+        """
+        Module: modulate buzzer frequency based on magnitude of acceleration vector.
+
+        ending action
+
+        :return: None x3
+        """
+
+        parameters = self.config[module_name]
+
+        low_frequency, high_frequency, low_acceleration, high_acceleration = parameters
+
+        # Get current angular velocities
+        ax = self.sensor_history['Acceleration']['x'].values[-1]
+        ay = self.sensor_history['Acceleration']['y'].values[-1]
+        az = self.sensor_history['Acceleration']['z'].values[-1]
+
+        # Total rate
+        a = np.sqrt(ax**2 + ay**2 + az**2) - 1.0
+
+        # Map to frequency
+        frequency = int(map_range(a, low_acceleration, high_acceleration, low_frequency, high_frequency))
+
+        if frequency < low_frequency:
+            frequency = low_frequency
+
+        if frequency > high_frequency:
+            frequency = high_frequency
+
+        # self.buzzer_stack = []
+        if self.buzzer:
+            command = [[time.time(), 'play_buzzer', [12, frequency, 0, 0]]]
+            return 1, command
+        else:
+            return None, None
+
+
+    def module_ballerina(self, module_name):
+        """
+        Spin like a ballerina.
+
+        Low priority, open loop command
+
+        :return:
+        priority    : (int) 1 or 0 indicating high or low priority, respectively
+        action      : None
+        commands    : (list) of four signed command actions
+        """
+
+        parameters = self.config[module_name]
+        command_turnangle = parameters
+
+        ranges = self.sensor_history['Range'][['front', 'left', 'back', 'right']].values[-1]
+
+        if np.abs(self.sensor_history['Gyro']['z'].values[-1]) < 50:
+            command_turnangle = command_turnangle
+        else:
+            command_turnangle = 0
+
+        turnangle = int(command_turnangle)
+
+        if turnangle > 0:
+            return 1, ['turn_left', int(np.abs(turnangle))]
+        elif turnangle < 0:
+            return 1, ['turn_right', int(np.abs(turnangle))]
+        else:
+            return None, None
+
+    def module_homesick(self, module_name):
+        """
+        Module: always orient to home position.
+
+        :return:
+        commands    : (list) of four signed command actions
+        """
+
+        parameters = self.config[module_name]
+        turn_angle, = parameters
+
+        x0, y0, z0 = self.start_position
+
+        x, y, z = self.sensor_history['KalmanPositionEst'][['stateX', 'stateY', 'stateZ']].values[-1]
+
+        # Compute angle looking bck to home position
+        home_angle = np.arctan2(y-y0, x - x0)
+
+        # Current angle
+        yaw = self.sensor_history['Stabilizer']['yaw'].values[-1]
+
+        # Error
+        error = home_angle - yaw
+
+        # If close to home angle don't turn anymore, otherwise keep turning
+        if np.abs(error) > np.abs(1.5*turn_angle):
+            turn = turn_angle
+        else:
+            turn = 0
+
+        if turn > 0:
+            direction = 'turn_left'
+        else:
+            direction = 'turn_right'
+
+        if self.takeoff:
+            return 1, [direction, turn]
+        else:
+            return None, None
+
+
+    def module_push_pull(self, module_name):
+        """
+
+        Randomly choose to approach or retreat from any range finder that detects object.
+
+        :return:
+        priority    : (int) 1 or 0 indicating high or low priority, respectively
+        action      : None
+        commands    : (list) of four signed command actions
+        """
+
+        parameters = self.config[module_name]
+        detect_threshold, move_distance = parameters
+
+        ranges = ['front', 'left', 'back', 'right']
+        front, left, back, right = self.sensor_history['Range'][ranges].values[-1]
+
+        push_pull = np.random.choice([-1, 1])
+
+        if front < detect_threshold:
+            if push_pull == 1:
+                direction = 'forward'
+            else:
+                direction = 'back'
+        elif back < detect_threshold:
+            if push_pull == 1:
+                direction = 'back'
+            else:
+                direction = 'forward'
+        elif right < detect_threshold:
+            if push_pull == 1:
+                direction = 'right'
+            else:
+                direction = 'left'
+        elif left < detect_threshold:
+            if push_pull == 1:
+                direction = 'left'
+            else:
+                direction = 'right'
+        else:
+            direction = None
+
+        if direction is not None and self.takeoff:
+            print([direction, move_distance])
+            return 1, [direction, move_distance]
+        else:
+            return None, None
+
+    def module_vader(self, module_name):
+        """
+
+        Darth vader.
+
+        :return:
+        priority    : (int) 1 or 0 indicating high or low priority, respectively
+        action      : None
+        commands    : (list) of four signed command actions
+
+        """
+
+        ranges = ['front', 'left', 'back', 'right', 'up']
+        front, left, back, right, up = self.sensor_history['Range'][ranges].values[-1]
+
+        threshold = 40
+
+        if self.buzzer and not self.takeoff:
+            if (front < threshold) and (back < threshold) and (right < threshold) and (left < threshold) and (left < threshold):
+                print('I am your father.')
+                rospack = rospkg.RosPack()
+                package_path = rospack.get_path('braitenfly')
+                img_path = os.path.join(package_path, 'img', 'vader.jpeg')
+                os.system('eog ' + img_path + ' &')
+                self.cfclient.play_buzzer(number=10, frequency=0, duration=5.7, stop=True)
+
+        return None, None
+
+    def module_jumpy_allrangefinders(self, module_name):
+        """if there is an object within the threshold distance from n rangefinders, jolt up.
+        high priority, open loop command
+        Args:
+        return: priority, command
+        """
+        parameters = self.config[module_name]
+        distance_threshold, jolt_distance, velocity, n = parameters
+        range_now = self.sensor_history['Range'][['front', 'back', 'left', 'right']].values[-1]
+        if np.sum(range_now < distance_threshold) >= n:
+            command = ['up', [jolt_distance, velocity]]
+            return 0, [command]
+        return None, None
+
+    def module_jumpy_adjacentrangefinders(self, module_name):
+        """if there is an object within the threshold distance from adjacent rangefinders, jolt up.
+        high priority, open loop command
+        Args:
+        return: priority, command
+        """
+        parameters = self.config[module_name]
+        distance_threshold, jolt_distance, velocity = parameters
+        range_now = self.sensor_history['Range'][['front', 'left', 'back', 'right']].values[-1]
+        check1 = range_now[0] < distance_threshold and range_now[1] < distance_threshold
+        check2 = range_now[0] < distance_threshold and range_now[3] < distance_threshold
+        check3 = range_now[1] < distance_threshold and range_now[2] < distance_threshold
+        check4 = range_now[2] < distance_threshold and range_now[3] < distance_threshold
+        if any([check1, check2, check3, check4]):
+            print('jolt up')
+            command = ['up', [jolt_distance, velocity]]
+            return 0, [command]
+        return None, None
+
+    def module_dive_opposingrangefinders(self, module_name):
+        """if there is an object within the threshold distance from opposing rangefinders, jolt down.
+        high priority, open loop command
+        Args:
+        return: priority, command
+        """
+        parameters = self.config[module_name]
+        distance_threshold, jolt_distance, velocity = parameters
+        range_now = self.sensor_history['Range'][['front', 'left', 'back', 'right']].values[-1]
+        check1 = range_now[0] < distance_threshold and range_now[2] < distance_threshold
+        check2 = range_now[1] < distance_threshold and range_now[3] < distance_threshold
+        if any([check1, check2]):
+            print('jolt down')
+            command = ['down', [jolt_distance, velocity]]
+            return 0, [command]
+        return None, None
+
+    def module_too_high_bottomrangefinder(self, module_name):
+        """if there is an object within the threshold distance from the bottom rangefinder, go down to a safe height.
+        low priority, open loop command, delayee
+        Args:
+        return: priority, command
+        """
+        parameters = self.config[module_name]
+        distance_threshold, retreat_distance = parameters
+        range_now = self.sensor_history['Range'][['zrange']].values[-1]
+        if range_now > distance_threshold:
+            print('too high')
+            previous_down_commands = [x for x in self.action_stack if x[0] == 'down']
+            if len(previous_down_commands) > 2:
+                print('but already going down')
+                return None, None
+            command = ['down', retreat_distance]
+            return 5, [command]
+        return None, None
+
+    def module_impatient(self, module_name):
+        """if the drone is hovering for a while, move it around a bit.
+        """
+        parameters = self.config[module_name]
+        time_threshold, w1, w2 = parameters
+        time_now = time.time()
+        if len(self.module_history_timestamps) > 0:
+            timestamps = np.array(self.module_history_timestamps)
+            if time_now - np.max(timestamps) > time_threshold:
+                command = []
+                rotation_command = ['turn_left', np.random.randint(0, 360)] if np.random.choice([True, False],
+                                                                                                p=[w1, 1 - w1]) else []
+                forward_command = ['forward', np.random.uniform(-0.5, 0.5)] if np.random.choice([True, False],
+                                                                                               p=[w2, 1 - w2]) else []
+                command = [rotation_command, forward_command]
+                command = [c for c in command if len(c) > 0]
+                if len(command) > 0:
+                    return 1, command
+        else:
+            # there is no history, add one.
+            return 1, [['turn_left', 0.001]]
+        return None, None
+    
+    # def module_buzzer
+
+    
+
+    def module_power_low(self, module_name):
+        """if the battery is low, land and shutdown.
+        """
+        parameters = self.config[module_name]
+        low_battery_threshold = parameters[0]
+        current_battery_voltage = self.sensor_history['BatteryState']["vbat"].values[-1]
+        if current_battery_voltage < low_battery_threshold:
+            print('power low, v=', current_battery_voltage,'shutting down !!!!')
+            self.land_and_shutdown()
+        return None, None
+
+    # def module_buzzer_manyinteractions(self, module_name):
+    #     """if there are many recent interactions, play a happy song.
+    #     """
+    #     trigger_module, trigger_n, trigger_t = self.config[module_name]
+    #     time_now = time.time()
+    #     if len(self.module_history_timestamps) > 0:
+    #         matching_inds = np.where(np.array(self.module_history) == trigger_module)[0]
+    #         interaction_times = np.array(self.module_history_timestamps)[matching_inds]
+    #         interaction_times = time_now - np.array(interaction_times)
+    #         if np.sum(interaction_times < trigger_t) > trigger_n:
+    #             # print('found many interactions')
+    #             # now check if the module has been played recently
+    #             inds = [i for i, x in enumerate(self.buzzer_stack) if x == module_name]
+    #             print(self.module_history)
+    #             times = [self.module_history_timestamps[i] for i in inds]
+    #             times = time_now - np.array(times)
+    #             print('times', times)
+    #             if len(times)==0 and np.sum(times < trigger_t) == 0:
+    #                 print('playing buzzer', time.time())
+    #                 return 1, [[0, 'play_buzzer', [2, 1000, 1, 1]]]
+    #             # print('but recently played')
+    #     return None, None
+
+    def module_heat_buzzer(self, module_name):
+        self.sensor_timers = getattr(self, 'sensor_timers', {'both': None})
+        self.last_buzzer_toggle_time = getattr(self, 'last_buzzer_toggle_time', rospy.get_time())
+        self.buzzer_state = getattr(self, 'buzzer_state', "off")
+        self.total_inputs = getattr(self, 'total_inputs', 0)
+        self.final_beep_produced = getattr(self, 'final_beep_produced', False)
+
+        current_time = rospy.get_time()
+        sensor_threshold = 150
+        off_interval = 0.075
+
+        left_sensor = self.sensor_history['Range']['left'].values[-1]
+        right_sensor = self.sensor_history['Range']['right'].values[-1]
+
+        if left_sensor < sensor_threshold and right_sensor < sensor_threshold:
+            if self.sensor_timers['both'] is None:
+                self.sensor_timers['both'] = current_time
+                return None, None
+
+            if self.final_beep_produced:
+                return None, None
+
+            beep_duration = 1.0 - (self.total_inputs * 0.05)
+            if beep_duration < 0.1:
+                beep_duration = 0.1
+
+            if beep_duration == 0.1 and self.total_inputs == 25:
+                absolute_beep_duration = 4.0
+                absolute_beep_pitch = 3000
+                beep_on = [current_time, 'play_buzzer', [10, absolute_beep_pitch, absolute_beep_duration, 0]]
+                beep_off = [current_time + absolute_beep_duration, 'play_buzzer', [0, 500, 0, 0]]
+                self.final_beep_produced = True
+                return -1, [beep_on, beep_off]
+
+            beep_pitch = 300 + (self.total_inputs * 100)
+            if beep_pitch > 2800:
+                beep_pitch = 2800
+
+            if self.buzzer_state == "on":
+                if current_time - self.last_buzzer_toggle_time >= beep_duration:
+                    self.buzzer_state = "off"
+                    self.last_buzzer_toggle_time = current_time
+                    self.total_inputs += 1
+                    beep_off = [current_time, 'play_buzzer', [0, 500, 0, 0]]
+                    return -1, [beep_off]
+                else:
+                    return None, None
+            else:
+                if current_time - self.last_buzzer_toggle_time >= off_interval:
+                    self.buzzer_state = "on"
+                    self.last_buzzer_toggle_time = current_time
+                    beep_on = [current_time, 'play_buzzer', [12, int(beep_pitch), beep_duration, 0]]
+                    return -1, [beep_on]
+                else:
+                    return None, None
+        else:
+            self.sensor_timers['both'] = None
+            self.total_inputs = 0
+            self.final_beep_produced = False
+            if self.buzzer_state != "off":
+                self.buzzer_state = "off"
+                off_cmd = [current_time, 'play_buzzer', [0, 500, 0, 0]]
+                self.last_buzzer_toggle_time = current_time
+                return -1, [off_cmd]
+            self.last_buzzer_toggle_time = current_time
+            return None, None
+
+    def module_buzzer_beats(self, module_name):
+        self.sensor_timers = getattr(self, 'sensor_timers', {'both': None})
+        self.last_buzzer_toggle_time = getattr(self, 'last_buzzer_toggle_time', rospy.get_time())
+        self.buzzer_state = getattr(self, 'buzzer_state', "off")
+        current_time = rospy.get_time()
+        front_sensor = self.sensor_history['Range']['front'].values[-1]
+        back_sensor = self.sensor_history['Range']['back'].values[-1]
+
+        if front_sensor < 10 or front_sensor > 200 or back_sensor < 10 or back_sensor > 200:
+            if self.buzzer_state == "on":
+                beep_off = [current_time, 'play_buzzer', [0, 500, 0, 0]]
+                self.buzzer_state = "off"
+                self.sensor_timers['both'] = None
+                self.last_buzzer_toggle_time = current_time
+                return -1, [beep_off]
+            else:
+                self.sensor_timers['both'] = None
+                self.last_buzzer_toggle_time = current_time
+                return None, None
+
+        if self.sensor_timers['both'] is None:
+            self.sensor_timers['both'] = current_time
+            return None, None
+
+        duration = 0.075 + ((front_sensor - 10) / (200 - 10)) * (2.0 - 0.075)
+        pitch = 2800 - ((back_sensor - 10) / (200 - 10)) * (2800 - 10)
+        off_interval = 0.09
+
+        if self.buzzer_state == "on":
+            if current_time - self.last_buzzer_toggle_time >= duration:
+                self.buzzer_state = "off"
+                self.last_buzzer_toggle_time = current_time
+                beep_off = [current_time, 'play_buzzer', [0, 500, 0, 0]]
+                return -1, [beep_off]
+            else:
+                return None, None
+        else:
+            if current_time - self.last_buzzer_toggle_time >= off_interval:
+                self.buzzer_state = "on"
+                self.last_buzzer_toggle_time = current_time
+                beep_on = [current_time, 'play_buzzer', [12, int(pitch), duration, 0]]
+                return -1, [beep_on]
+            else:
+                return None, None
+
 
 
 def map_range(x, old_min, old_max, new_min, new_max):

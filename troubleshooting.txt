@@ -1,0 +1,33 @@
+#------------------------------------------------------------------------------------#
+
+
+
+Issue: Wifi driver not found
+
+Solution for this issue was found here: 
+
+https://askubuntu.com/questions/1412219/how-to-solve-no-wi-fi-adapter-found-error-with-realtek-rtl8852be-wifi-6-802-11/1412264#1412264
+
+more discussion of this issue here: https://askubuntu.com/questions/1412450/network-driver-for-realtek-10ecb852
+
+
+basic problem is the driver needs to be updated.
+
+First, run the command 
+
+lspci -nnk | grep 0280 -A3
+
+to check what the driver version is, then you need to run some system updates and reinstall the driver with the following commands:
+
+
+git clone https://github.com/HRex39/rtl8852be.git
+cd rtl8852be
+make
+sudo make install
+
+--> once this is done you can reboot and it should work! See the linked webpage above for dditional troubleshooting ideas if this doesnt solve the issue.  https://askubuntu.com/questions/1412450/network-driver-for-realtek-10ecb852
+
+
+#------------------------------------------------------------------------------------#
+
+
